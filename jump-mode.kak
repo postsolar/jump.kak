@@ -85,6 +85,9 @@ define-command jumpJump \
 
   # Initialize recording of keypresses to execute the jump
   prompt 'Jump to: ' -on-change jumpOnPromptChange -on-abort jumpRemoveHighlighters %{
+    # Prevent erroneous entry from keeping labels highlighting around
+    jumpRemoveHighlighters
+    echo -markup '{Error}Jump label not found'
   }
 
 }
