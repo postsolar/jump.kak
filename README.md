@@ -1,5 +1,7 @@
 # Jump — another Kakoune jump-mode plugin
 
+![Screenshot](assets/screenshot.png)
+
 ## Differences from existing alternatives
 
 - Dimmed text when entering jump mode (face used is configurable)
