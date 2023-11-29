@@ -20,16 +20,21 @@ declare-option -docstring "
   jumpDimFace comment
 
 # ***** Internal state
-# Path to the source code of this file
+# Path to the source code of this file.
 declare-option -hidden str jumpSourcePath %val{source}
 
-# Range specs for jump labels
+# Range-specs to use for labels.
 declare-option -hidden range-specs jumpLabelsRanges
 
-# Contents of the visible part of the buffer to be labeled
+# JSON string describing jump positions. Contains labels' strings,
+# byte positions to generate range-specs and character positions
+# to perform a jump after a label is chosen.
+declare-option -hidden str jumpLabelsPositions
+
+# Contents of the visible part of the buffer to be labeled.
 declare-option -hidden str jumpContents
 
-# Selection description of the visible part of the buffer
+# Selection description of the visible part of the buffer.
 declare-option -hidden str jumpContentsRange
 
 define-command jumpJump \
@@ -47,21 +52,40 @@ define-command jumpJump \
   # Add dim face to everything
   add-highlighter window/jumpDim regex "(.*)" %sh{ echo "1:$kak_opt_jumpDimFace" }
 
-  # Generate highlighting commands
-  evaluate-commands %sh{
+  # Generate JSON describing positions of jump labels
+  set-option window jumpLabelsPositions %sh{
     # Environment variables to make accessible to the labels generating script
     # $kak_cursor_line
     # $kak_cursor_column
     # $kak_opt_jumpContentsRange
-    # $kak_opt_jumpLabelFace
     # $kak_opt_jumpLabelsCharacters
     # $kak_opt_jumpExtraWordCharacters
-    echo \
-      "set-option window jumpLabelsRanges $kak_timestamp" \
-      "$(echo "$kak_opt_jumpContents" | node "$(dirname $kak_opt_jumpSourcePath)/index.js")"
-    echo \
-      "add-highlighter window/jumpLabels replace-ranges 'jumpLabelsRanges'"
+    echo "$kak_opt_jumpContents" | node "$(dirname $kak_opt_jumpSourcePath)/index.js"
   }
+
+  # Extract labels' range-specs from resulting JSON
+  # For some reason setting the option directly doesn't work here
+  evaluate-commands %sh{
+    printf "set-option window jumpLabelsRanges $kak_timestamp "
+    node -e "
+      const jumpLabels = JSON.parse('$kak_opt_jumpLabelsPositions')
+      jumpLabels.forEach
+        ( l => process.stdout.write
+            ( l.line
+            + '.'
+            + l.bytePosition
+            + '+'
+            + l.byteLength
+            + '|{$kak_opt_jumpLabelFace}'
+            + l.label
+            + ' '
+            )
+        )
+    "
+  }
+
+  # Add highlighters for labels
+  add-highlighter window/jumpLabels replace-ranges 'jumpLabelsRanges'
 
   # Remove labels highlighters after the jump is executed or aborted
   define-command -hidden -override jumpRemoveHighlighters %{
@@ -73,12 +97,11 @@ define-command jumpJump \
   define-command -hidden -override jumpOnPromptChange %{
     evaluate-commands %sh{
       node -e "
-        const ranges = '$kak_opt_jumpLabelsRanges'
-        const labelPositionMatches = ranges.match(/(\d+)\.(\d+),\d+\.\d+\|\{\w+\}$kak_text(\s|$)/)
-        if (labelPositionMatches === null)
+        const jumpLabels = JSON.parse('$kak_opt_jumpLabelsPositions')
+        const targetLabel = jumpLabels.find(label => label.label === '$kak_text')
+        if (targetLabel === undefined)
           process.exit()
-        const labelPosition = labelPositionMatches.slice(1, 3)
-        console.log('execute-keys <esc> ' + labelPosition[0] + 'g ' + labelPosition[1] + 'l eb')
+        console.log('execute-keys <esc> ' + targetLabel.line + 'g ' + (targetLabel.column - 1) + 'l eb')
       "
     }
   }

@@ -10,6 +10,10 @@ function intDiv(x, y) {
   return 0;
 }
 
+// output-es/Type.Proxy/index.js
+var $$$Proxy = () => ({ tag: "Proxy" });
+var $$Proxy = /* @__PURE__ */ $$$Proxy();
+
 // output-es/Data.Functor/foreign.js
 var arrayMap = function(f) {
   return function(arr) {
@@ -39,9 +43,11 @@ var arrayBind = function(arr) {
 // output-es/Control.Bind/index.js
 var identity = (x) => x;
 
-// output-es/Data.Show/foreign.js
-var showIntImpl = function(n) {
-  return n.toString();
+// output-es/Record.Unsafe/foreign.js
+var unsafeGet = function(label) {
+  return function(rec) {
+    return rec[label];
+  };
 };
 
 // output-es/Data.Ordering/index.js
@@ -236,6 +242,11 @@ var ordIntImpl = unsafeCompareImpl;
 
 // output-es/Data.Ord/index.js
 var ordInt = { compare: /* @__PURE__ */ ordIntImpl(LT)(EQ)(GT), Eq0: () => eqInt };
+
+// output-es/Unsafe.Coerce/foreign.js
+var unsafeCoerce = function(x) {
+  return x;
+};
 
 // output-es/Data.Traversable/foreign.js
 var traverseArrayImpl = function() {
@@ -4232,40 +4243,6 @@ var foldableWithIndexArray = {
   Foldable0: () => foldableArray
 };
 
-// output-es/Data.EuclideanRing/foreign.js
-var intMod = function(x) {
-  return function(y) {
-    if (y === 0)
-      return 0;
-    var yy = Math.abs(y);
-    return (x % yy + yy) % yy;
-  };
-};
-
-// output-es/Data.Semigroup/foreign.js
-var concatString = function(s1) {
-  return function(s2) {
-    return s1 + s2;
-  };
-};
-var concatArray = function(xs) {
-  return function(ys) {
-    if (xs.length === 0)
-      return ys;
-    if (ys.length === 0)
-      return xs;
-    return xs.concat(ys);
-  };
-};
-
-// output-es/Data.Semigroup/index.js
-var semigroupString = { append: concatString };
-var semigroupArray = { append: concatArray };
-
-// output-es/Data.Monoid/index.js
-var monoidString = { mempty: "", Semigroup0: () => semigroupString };
-var monoidArray = { mempty: [], Semigroup0: () => semigroupArray };
-
 // output-es/Data.Bounded/foreign.js
 var topChar = String.fromCharCode(65535);
 var bottomChar = String.fromCharCode(0);
@@ -4313,6 +4290,16 @@ function fromCharCode(c) {
   return String.fromCharCode(c);
 }
 
+// output-es/Data.EuclideanRing/foreign.js
+var intMod = function(x) {
+  return function(y) {
+    if (y === 0)
+      return 0;
+    var yy = Math.abs(y);
+    return (x % yy + yy) % yy;
+  };
+};
+
 // output-es/Data.String.Unsafe/foreign.js
 var charAt = function(i) {
   return function(s) {
@@ -4332,6 +4319,13 @@ var length2 = function(s) {
 var drop = function(n) {
   return function(s) {
     return s.substring(n);
+  };
+};
+var slice = function(b) {
+  return function(e) {
+    return function(s) {
+      return s.slice(b, e);
+    };
   };
 };
 
@@ -4388,41 +4382,18 @@ var _unsafeCodePointAt0 = function(fallback) {
     return str.codePointAt(0);
   } : fallback;
 };
-var _codePointAt = function(fallback) {
-  return function(Just2) {
-    return function(Nothing2) {
-      return function(unsafeCodePointAt02) {
-        return function(index) {
-          return function(str) {
-            var length3 = str.length;
-            if (index < 0 || index >= length3)
-              return Nothing2;
-            if (hasStringIterator) {
-              var iter = str[Symbol.iterator]();
-              for (var i = index; ; --i) {
-                var o = iter.next();
-                if (o.done)
-                  return Nothing2;
-                if (i === 0)
-                  return Just2(unsafeCodePointAt02(o.value));
-              }
-            }
-            return fallback(index)(str);
-          };
-        };
-      };
-    };
-  };
-};
-var _fromCodePointArray = function(singleton2) {
+var _fromCodePointArray = function(singleton3) {
   return hasFromCodePoint ? function(cps) {
     if (cps.length < 1e4) {
       return String.fromCodePoint.apply(String, cps);
     }
-    return cps.map(singleton2).join("");
+    return cps.map(singleton3).join("");
   } : function(cps) {
-    return cps.map(singleton2).join("");
+    return cps.map(singleton3).join("");
   };
+};
+var _singleton = function(fallback) {
+  return hasFromCodePoint ? String.fromCodePoint : fallback;
 };
 var _toCodePointArray = function(fallback) {
   return function(unsafeCodePointAt02) {
@@ -4487,39 +4458,8 @@ var singletonFallback = (v) => {
   return fromCharCode2(intDiv(v - 65536 | 0, 1024) + 55296 | 0) + fromCharCode2(intMod(v - 65536 | 0)(1024) + 56320 | 0);
 };
 var fromCodePointArray = /* @__PURE__ */ _fromCodePointArray(singletonFallback);
+var singleton2 = /* @__PURE__ */ _singleton(singletonFallback);
 var eqCodePoint = { eq: (x) => (y) => x === y };
-var codePointAtFallback = (codePointAtFallback$a0$copy) => (codePointAtFallback$a1$copy) => {
-  let codePointAtFallback$a0 = codePointAtFallback$a0$copy, codePointAtFallback$a1 = codePointAtFallback$a1$copy, codePointAtFallback$c = true, codePointAtFallback$r;
-  while (codePointAtFallback$c) {
-    const n = codePointAtFallback$a0, s = codePointAtFallback$a1;
-    const v = uncons(s);
-    if (v.tag === "Just") {
-      if (n === 0) {
-        codePointAtFallback$c = false;
-        codePointAtFallback$r = $Maybe("Just", v._1.head);
-        continue;
-      }
-      codePointAtFallback$a0 = n - 1 | 0;
-      codePointAtFallback$a1 = v._1.tail;
-      continue;
-    }
-    codePointAtFallback$c = false;
-    codePointAtFallback$r = Nothing;
-  }
-  return codePointAtFallback$r;
-};
-var codePointAt = (v) => (v1) => {
-  if (v < 0) {
-    return Nothing;
-  }
-  if (v === 0) {
-    if (v1 === "") {
-      return Nothing;
-    }
-    return $Maybe("Just", unsafeCodePointAt0(v1));
-  }
-  return _codePointAt(codePointAtFallback)(Just)(Nothing)(unsafeCodePointAt0)(v)(v1);
-};
 
 // output-es/Effect.Exception/foreign.js
 function error(msg) {
@@ -5483,9 +5423,46 @@ var keys = Object.keys || toArrayWithKey(function(k) {
   };
 });
 
+// output-es/Node.Encoding/foreign.js
+import { Buffer as Buffer2 } from "node:buffer";
+var byteLengthImpl = (str, enc) => Buffer2.byteLength(str, enc);
+
 // output-es/Node.Encoding/index.js
 var $Encoding = (tag) => tag;
 var UTF8 = /* @__PURE__ */ $Encoding("UTF8");
+var byteLength = (str) => (enc) => byteLengthImpl(
+  str,
+  (() => {
+    if (enc === "ASCII") {
+      return "ascii";
+    }
+    if (enc === "UTF8") {
+      return "utf8";
+    }
+    if (enc === "UTF16LE") {
+      return "utf16le";
+    }
+    if (enc === "UCS2") {
+      return "ucs2";
+    }
+    if (enc === "Base64") {
+      return "base64";
+    }
+    if (enc === "Base64Url") {
+      return "base64url";
+    }
+    if (enc === "Latin1") {
+      return "latin1";
+    }
+    if (enc === "Binary") {
+      return "binary";
+    }
+    if (enc === "Hex") {
+      return "hex";
+    }
+    fail();
+  })()
+);
 
 // output-es/Effect.Uncurried/foreign.js
 var mkEffectFn1 = function mkEffectFn12(fn) {
@@ -5536,9 +5513,9 @@ var stderrIsTTY = process.stderrIsTTY;
 var version = process.version;
 
 // output-es/Node.Buffer.Immutable/foreign.js
-import { Buffer as Buffer2 } from "node:buffer";
+import { Buffer as Buffer3 } from "node:buffer";
 var toStringImpl = (enc, buff) => buff.toString(enc);
-var concat2 = (buffs) => Buffer2.concat(buffs);
+var concat2 = (buffs) => Buffer3.concat(buffs);
 
 // output-es/Node.Buffer.Immutable/index.js
 var toString2 = (enc) => (buf) => toStringImpl(
@@ -5646,6 +5623,47 @@ var readableToString = (dictMonadAff) => {
   }));
 };
 
+// output-es/Foreign/foreign.js
+var isArray = Array.isArray || function(value) {
+  return Object.prototype.toString.call(value) === "[object Array]";
+};
+
+// output-es/Record.Builder/foreign.js
+function unsafeInsert(l) {
+  return function(a) {
+    return function(rec) {
+      rec[l] = a;
+      return rec;
+    };
+  };
+}
+
+// output-es/Record.Builder/index.js
+var insert = () => () => (dictIsSymbol) => (l) => (a) => (r1) => unsafeInsert(dictIsSymbol.reflectSymbol(l))(a)(r1);
+
+// output-es/Yoga.JSON/foreign.js
+function replacer(key, value) {
+  if (typeof value === "bigint") {
+    return value.toString();
+  }
+  return value;
+}
+var _unsafeStringify = (data) => JSON.stringify(data, replacer);
+
+// output-es/Yoga.JSON/index.js
+var identity7 = (x) => x;
+var writeForeignString = { writeImpl: unsafeCoerce };
+var writeForeignInt = { writeImpl: unsafeCoerce };
+var writeForeignFieldsNilRowR = { writeImplFields: (v) => (v1) => identity7 };
+var writeJSON = (dictWriteForeign) => (x) => _unsafeStringify(dictWriteForeign.writeImpl(x));
+var writeForeignFieldsCons = (dictIsSymbol) => (dictWriteForeign) => (dictWriteForeignFields) => () => () => () => ({
+  writeImplFields: (v) => (rec) => {
+    const $0 = insert()()(dictIsSymbol)($$Proxy)(dictWriteForeign.writeImpl(unsafeGet(dictIsSymbol.reflectSymbol($$Proxy))(rec)));
+    const $1 = dictWriteForeignFields.writeImplFields($$Proxy)(rec);
+    return (x) => $0($1(x));
+  }
+});
+
 // output-es/Main/index.js
 var min2 = (x) => (y) => {
   const v = ordInt.compare(x)(y);
@@ -5660,9 +5678,15 @@ var min2 = (x) => (y) => {
   }
   fail();
 };
-var foldMapWithIndex = /* @__PURE__ */ (() => foldableWithIndexArray.foldMapWithIndex(monoidArray))();
 var traverse = /* @__PURE__ */ (() => traversableArray.traverse(applicativeMaybe))();
-var foldMap = /* @__PURE__ */ (() => foldableArray.foldMap(monoidString))();
+var writeJSON2 = /* @__PURE__ */ writeJSON(/* @__PURE__ */ (() => {
+  const $0 = writeForeignFieldsCons({ reflectSymbol: () => "byteLength" })(writeForeignInt)(writeForeignFieldsCons({
+    reflectSymbol: () => "bytePosition"
+  })(writeForeignInt)(writeForeignFieldsCons({ reflectSymbol: () => "column" })(writeForeignInt)(writeForeignFieldsCons({
+    reflectSymbol: () => "label"
+  })(writeForeignString)(writeForeignFieldsCons({ reflectSymbol: () => "line" })(writeForeignInt)(writeForeignFieldsNilRowR)()()())()()())()()())()()())()()();
+  return { writeImpl: (xs) => arrayMap((rec) => $0.writeImplFields($$Proxy)(rec)({}))(xs) };
+})());
 var getLabels = (v) => {
   const $0 = v.labelCharset;
   const nextLabel = (v1) => {
@@ -5676,13 +5700,18 @@ var getLabels = (v) => {
     return _crashWith("Index error");
   };
   const lineNrOffset = min2(v.bufferSelection.endLine)(v.bufferSelection.startLine);
-  const go = (go$a0$copy) => (go$a1$copy) => (go$a2$copy) => (go$a3$copy) => {
-    let go$a0 = go$a0$copy, go$a1 = go$a1$copy, go$a2 = go$a2$copy, go$a3 = go$a3$copy, go$c = true, go$r;
-    while (go$c) {
-      const v1 = go$a0, v2 = go$a1, v3 = go$a2, v4 = go$a3;
+  const generateLabels = (generateLabels$a0$copy) => (generateLabels$a1$copy) => (generateLabels$a2$copy) => (generateLabels$a3$copy) => {
+    let generateLabels$a0 = generateLabels$a0$copy;
+    let generateLabels$a1 = generateLabels$a1$copy;
+    let generateLabels$a2 = generateLabels$a2$copy;
+    let generateLabels$a3 = generateLabels$a3$copy;
+    let generateLabels$c = true;
+    let generateLabels$r;
+    while (generateLabels$c) {
+      const v1 = generateLabels$a0, v2 = generateLabels$a1, v3 = generateLabels$a2, v4 = generateLabels$a3;
       if (v1.length === 0 && v2.length === 0) {
-        go$c = false;
-        go$r = v4;
+        generateLabels$c = false;
+        generateLabels$r = v4;
         continue;
       }
       const v5 = nextLabel(v3);
@@ -5692,17 +5721,17 @@ var getLabels = (v) => {
         const v7 = unconsImpl((v$1) => Nothing, (x) => (xs) => $Maybe("Just", { head: x, tail: xs }), v2);
         if (v7.tag === "Just") {
           const v8 = nextLabel(v5._2);
-          go$a0 = v6._1.init;
-          go$a1 = v7._1.tail;
-          go$a2 = v8._2;
-          go$a3 = snoc(acc$p)(v7._1.head(v8._1));
+          generateLabels$a0 = v6._1.init;
+          generateLabels$a1 = v7._1.tail;
+          generateLabels$a2 = v8._2;
+          generateLabels$a3 = snoc(acc$p)(v7._1.head(v8._1));
           continue;
         }
         if (v7.tag === "Nothing") {
-          go$a0 = v6._1.init;
-          go$a1 = [];
-          go$a2 = v5._2;
-          go$a3 = acc$p;
+          generateLabels$a0 = v6._1.init;
+          generateLabels$a1 = [];
+          generateLabels$a2 = v5._2;
+          generateLabels$a3 = acc$p;
           continue;
         }
         fail();
@@ -5710,33 +5739,55 @@ var getLabels = (v) => {
       if (v6.tag === "Nothing") {
         const v7 = unconsImpl((v$1) => Nothing, (x) => (xs) => $Maybe("Just", { head: x, tail: xs }), v2);
         if (v7.tag === "Just") {
-          go$a0 = [];
-          go$a1 = v7._1.tail;
-          go$a2 = v5._2;
-          go$a3 = snoc(v4)(v7._1.head(v5._1));
+          generateLabels$a0 = [];
+          generateLabels$a1 = v7._1.tail;
+          generateLabels$a2 = v5._2;
+          generateLabels$a3 = snoc(v4)(v7._1.head(v5._1));
           continue;
         }
         if (v7.tag === "Nothing") {
-          go$c = false;
-          go$r = v4;
+          generateLabels$c = false;
+          generateLabels$r = v4;
           continue;
         }
       }
       fail();
     }
-    return go$r;
+    return generateLabels$r;
   };
-  const $1 = splitAt((v.currentLine - lineNrOffset | 0) + 1 | 0)(mapWithIndexArray((lineNr) => (line) => foldMapWithIndex((column) => (codepoint) => arrayBind(isAlphaNum(codepoint) || elem(eqCodePoint)(codepoint)(v.extraWordCharacters) ? [void 0] : [])(() => {
-    const v1 = codePointAt(column - 1 | 0)(line);
-    if (v1.tag === "Just") {
-      return arrayMap((v$1) => (v1$1) => ({ line: lineNr + lineNrOffset | 0, column: column + 1 | 0, label: v1$1 }))(!(isAlphaNum(v1._1) || elem(eqCodePoint)(v1._1)(v.extraWordCharacters)) ? [void 0] : []);
-    }
-    if (v1.tag === "Nothing") {
-      return [(v1$1) => ({ line: lineNr + lineNrOffset | 0, column: column + 1 | 0, label: v1$1 })];
-    }
-    fail();
-  }))(toCodePointArray(line)))(split("\n")(v.buffer)));
-  return go(arrayBind($1.before)(identity))(arrayBind($1.after)(identity))($Tuple(0, 0))([]);
+  const $1 = splitAt((v.currentLine - lineNrOffset | 0) + 1 | 0)(mapWithIndexArray((lineNr) => (line) => foldableWithIndexArray.foldlWithIndex((column) => (v1) => (codepoint) => {
+    const $12 = v1.bytePosition;
+    return {
+      prev: $Maybe("Just", codepoint),
+      bytePosition: $12 + byteLength(singleton2(codepoint))(UTF8) | 0,
+      acc: (() => {
+        const jumpPosition = (label) => ({
+          line: lineNr + lineNrOffset | 0,
+          column: column + 1 | 0,
+          bytePosition: $12,
+          byteLength: byteLength(slice(column + 1 | 0)((column + toCodePointArray(label).length | 0) + 1 | 0)(line))(UTF8),
+          label
+        });
+        if (v1.prev.tag === "Nothing") {
+          if (isAlphaNum(codepoint) || elem(eqCodePoint)(codepoint)(v.extraWordCharacters)) {
+            return snoc(v1.acc)(jumpPosition);
+          }
+          return v1.acc;
+        }
+        if (v1.prev.tag === "Just") {
+          if (isAlphaNum(v1.prev._1) || elem(eqCodePoint)(v1.prev._1)(v.extraWordCharacters)) {
+            return v1.acc;
+          }
+          if (isAlphaNum(codepoint) || elem(eqCodePoint)(codepoint)(v.extraWordCharacters)) {
+            return snoc(v1.acc)(jumpPosition);
+          }
+          return v1.acc;
+        }
+        fail();
+      })()
+    };
+  })({ prev: Nothing, bytePosition: 1, acc: [] })(toCodePointArray(line)).acc)(split("\n")(v.buffer)));
+  return generateLabels(arrayBind($1.before)(identity))(arrayBind($1.after)(identity))($Tuple(0, 0))([]);
 };
 var kakouneEnvironment = /* @__PURE__ */ (() => {
   const $0 = throwException(error("[ERROR] JumpMode: couldn't find $kak_opt_jumpContentsRange in the environment\n\n"));
@@ -5806,46 +5857,22 @@ var kakouneEnvironment = /* @__PURE__ */ (() => {
     })();
     const $12 = toCodePointArray($11);
     if ($12.length >= 10) {
-      const $132 = throwException(error("[ERROR] JumpMode: couldn't find $kak_opt_jumpLabelFace in the environment\n\n"));
-      const a$p$62 = unsafeGetEnv();
-      const $142 = _lookup(Nothing, Just, "kak_opt_jumpLabelFace", a$p$62);
-      const labelFace2 = (() => {
-        if ($142.tag === "Nothing") {
-          return $132();
-        }
-        if ($142.tag === "Just") {
-          return $142._1;
-        }
-        fail();
-      })();
       const v$12 = fromString(currentColumn$p);
       const v12 = fromString(currentLine$p);
       if (v12.tag === "Just" && v$12.tag === "Just") {
-        const $15 = v$12._1;
-        const $16 = v12._1;
-        return (v2) => ({ buffer: v2, currentLine: $16, currentColumn: $15, labelCharset: $12, bufferSelection, extraWordCharacters, labelFace: labelFace2 });
+        const $13 = v$12._1;
+        const $14 = v12._1;
+        return (v2) => ({ buffer: v2, currentLine: $14, currentColumn: $13, labelCharset: $12, bufferSelection, extraWordCharacters });
       }
       fail();
     }
     const labelCharset = $8();
-    const $13 = throwException(error("[ERROR] JumpMode: couldn't find $kak_opt_jumpLabelFace in the environment\n\n"));
-    const a$p$6 = unsafeGetEnv();
-    const $14 = _lookup(Nothing, Just, "kak_opt_jumpLabelFace", a$p$6);
-    const labelFace = (() => {
-      if ($14.tag === "Nothing") {
-        return $13();
-      }
-      if ($14.tag === "Just") {
-        return $14._1;
-      }
-      fail();
-    })();
     const v$1 = fromString(currentColumn$p);
     const v1 = fromString(currentLine$p);
     if (v1.tag === "Just" && v$1.tag === "Just") {
-      const $15 = v$1._1;
-      const $16 = v1._1;
-      return (v2) => ({ buffer: v2, currentLine: $16, currentColumn: $15, labelCharset, bufferSelection, extraWordCharacters, labelFace });
+      const $13 = v$1._1;
+      const $14 = v1._1;
+      return (v2) => ({ buffer: v2, currentLine: $14, currentColumn: $13, labelCharset, bufferSelection, extraWordCharacters });
     }
     fail();
   };
@@ -5856,7 +5883,7 @@ var main = /* @__PURE__ */ (() => {
     _bind(readableToString(monadAffAff)(stdin)(UTF8))((stdin2) => _bind(_liftEffect(() => {
       const a$p = kakouneEnvironment();
       return a$p(stdin2);
-    }))((env) => _liftEffect(log2(foldMap((v) => " " + showIntImpl(v.line) + "." + showIntImpl(v.column) + "+" + showIntImpl(toCodePointArray(v.label).length) + "|{" + env.labelFace + "}" + v.label)(getLabels(env))))))
+    }))((env) => _liftEffect(log2(writeJSON2(getLabels(env))))))
   );
   return () => {
     const fiber = $0();

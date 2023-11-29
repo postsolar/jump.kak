@@ -9,6 +9,7 @@ package:
     - parsing
     - prelude
     - strings
+    - yoga-json
   name: jump-mode
   test:
     dependencies: []
