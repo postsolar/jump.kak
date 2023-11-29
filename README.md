@@ -13,6 +13,10 @@ the ones furthest from your cursor will be `bx`, `by`, `bz`, irrespective of whe
 or after the cursor line and column.
 - Powered by Node
 
+## Dependencies
+
+You should have [node](https://github.com/nodejs/node) installed and available in your PATH.
+
 ## Installation
 
 1. Either:
@@ -53,6 +57,7 @@ Face to use for dimming out non-label text.
 Default value: comment
 
 ## TODO
+- Different faces for the first and following characters of a label.
 - Incrementally remove highlighting when entering the characters for the label to jump to. That is, if `c` is entered
 as the first character, every non-`c` label should be removed from the view, and every first `c` within every label
 which starts with `c` should be highlighted differently.
