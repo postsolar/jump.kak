@@ -4,6 +4,7 @@
 
 ## Differences from existing alternatives
 
+- Handling of text with multi-byte (Unicode) characters
 - Dimmed text when entering jump mode (face used is configurable)
 - Highlighted labels (face used is configurable)
 - Jumps in both directions with single command
