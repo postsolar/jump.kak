@@ -55,12 +55,13 @@ define-command jumpJump \
   # Generate JSON describing positions of jump labels
   set-option window jumpLabelsPositions %sh{
     # Environment variables to make accessible to the labels generating script
+    # $kak_opt_jumpContents
     # $kak_cursor_line
     # $kak_cursor_column
     # $kak_opt_jumpContentsRange
     # $kak_opt_jumpLabelsCharacters
     # $kak_opt_jumpExtraWordCharacters
-    echo "$kak_opt_jumpContents" | node "$(dirname $kak_opt_jumpSourcePath)/index.js"
+    node "$(dirname $kak_opt_jumpSourcePath)/index.js"
   }
 
   # Extract labels' range-specs from resulting JSON

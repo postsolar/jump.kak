@@ -21,15 +21,13 @@ import Effect.Class (liftEffect)
 import Effect.Class.Console (log)
 import Effect.Exception (throw)
 import Node.Encoding (byteLength, Encoding(UTF8))
-import Node.Process (stdin, lookupEnv) as Process
-import Node.Stream.Aff (readableToStringUtf8) as Stream.Aff
+import Node.Process (lookupEnv) as Process
 import Partial.Unsafe (unsafePartial, unsafeCrashWith)
 import Yoga.JSON as JSON
 
 main ∷ Effect Unit
 main = launchAff_ do
-  stdin ← Stream.Aff.readableToStringUtf8 Process.stdin
-  env ← liftEffect $ (_ $ stdin) <$> kakouneEnvironment
+  env ← liftEffect kakouneEnvironment
   let labels = getLabels env
   log $ JSON.writeJSON labels
 
@@ -80,8 +78,9 @@ charsetFromString =
   S.toCodePointArray >>> \cps →
     guard (A.length cps >= 10) $> Charset cps
 
-kakouneEnvironment ∷ Effect (String → KakouneEnvironment)
+kakouneEnvironment ∷ Effect KakouneEnvironment
 kakouneEnvironment = do
+  buffer              ← lookupOrThrow "kak_opt_jumpContents"
   bufferSelection     ← lookupOrThrow "kak_opt_jumpContentsRange"
                           >>= parseSelectionDescription
   currentLine'        ← lookupOrThrow "kak_cursor_line"
@@ -97,7 +96,7 @@ kakouneEnvironment = do
       of
       Just currentLine, Just currentColumn →
         pure
-          { buffer: _
+          { buffer
           , currentLine
           , currentColumn
           , labelCharset

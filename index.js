@@ -265,7 +265,7 @@ var traverseArrayImpl = function() {
       };
     };
   }
-  function concat22(xs) {
+  function concat2(xs) {
     return function(ys) {
       return xs.concat(ys);
     };
@@ -287,7 +287,7 @@ var traverseArrayImpl = function() {
                   return apply(apply(map(array3)(f(array[bot])))(f(array[bot + 1])))(f(array[bot + 2]));
                 default:
                   var pivot = bot + Math.floor((top - bot) / 4) * 2;
-                  return apply(map(concat22)(go(bot, pivot)))(go(pivot, top));
+                  return apply(map(concat2)(go(bot, pivot)))(go(pivot, top));
               }
             }
             return go(0, array.length);
@@ -752,7 +752,7 @@ var rule199 = { category: 134217728, unicodeCat: NUMCAT_CS, possible: 0, updist:
 var rule200 = { category: 268435456, unicodeCat: NUMCAT_CO, possible: 0, updist: 0, lowdist: 0, titledist: 0 };
 var rule16 = { category: 65536, unicodeCat: NUMCAT_CF, possible: 0, updist: 0, lowdist: 0, titledist: 0 };
 var rule0 = { category: 1, unicodeCat: NUMCAT_CC, possible: 0, updist: 0, lowdist: 0, titledist: 0 };
-var bsearch = (a) => (array) => (size3) => (compare) => {
+var bsearch = (a) => (array) => (size2) => (compare) => {
   const go = (go$a0$copy) => (go$a1$copy) => {
     let go$a0 = go$a0$copy, go$a1 = go$a1$copy, go$c = true, go$r;
     while (go$c) {
@@ -780,7 +780,7 @@ var bsearch = (a) => (array) => (size3) => (compare) => {
     }
     return go$r;
   };
-  return go(0)(size3);
+  return go(0)(size2);
 };
 var blkCmp = (v) => (v1) => {
   if (v.start >= v1.start && v.start < (v1.start + v1.length | 0)) {
@@ -791,8 +791,8 @@ var blkCmp = (v) => (v1) => {
   }
   return LT;
 };
-var getRule = (blocks) => (unichar) => (size3) => {
-  const maybeCharBlock = bsearch({ start: unichar, length: 1, convRule: nullrule })(blocks)(size3)(blkCmp);
+var getRule = (blocks) => (unichar) => (size2) => {
+  const maybeCharBlock = bsearch({ start: unichar, length: 1, convRule: nullrule })(blocks)(size2)(blkCmp);
   if (maybeCharBlock.tag === "Nothing") {
     return Nothing;
   }
@@ -4512,7 +4512,7 @@ var Aff = function() {
     fn.tag = tag;
     return fn;
   }
-  function nonCanceler2(error3) {
+  function nonCanceler(error3) {
     return new Aff2(PURE, void 0);
   }
   function runEff(eff) {
@@ -4536,20 +4536,20 @@ var Aff = function() {
       return eff(k)();
     } catch (error3) {
       k(left(error3))();
-      return nonCanceler2;
+      return nonCanceler;
     }
   }
   var Scheduler = function() {
     var limit = 1024;
-    var size3 = 0;
+    var size2 = 0;
     var ix = 0;
     var queue = new Array(limit);
     var draining = false;
     function drain() {
       var thunk;
       draining = true;
-      while (size3 !== 0) {
-        size3--;
+      while (size2 !== 0) {
+        size2--;
         thunk = queue[ix];
         queue[ix] = void 0;
         ix = (ix + 1) % limit;
@@ -4563,13 +4563,13 @@ var Aff = function() {
       },
       enqueue: function(cb) {
         var i, tmp;
-        if (size3 === limit) {
+        if (size2 === limit) {
           tmp = draining;
           drain();
           draining = tmp;
         }
-        queue[(ix + size3) % limit] = cb;
-        size3++;
+        queue[(ix + size2) % limit] = cb;
+        size2++;
         if (!draining) {
           drain();
         }
@@ -5258,7 +5258,7 @@ var Aff = function() {
                 newKills[kid2]();
               }
             }
-            return nonCanceler2;
+            return nonCanceler;
           };
         });
       };
@@ -5295,22 +5295,11 @@ var Aff = function() {
   Aff2.Fiber = Fiber;
   Aff2.Supervisor = Supervisor;
   Aff2.Scheduler = Scheduler;
-  Aff2.nonCanceler = nonCanceler2;
+  Aff2.nonCanceler = nonCanceler;
   return Aff2;
 }();
 var _pure = Aff.Pure;
 var _throwError = Aff.Throw;
-function _map(f) {
-  return function(aff) {
-    if (aff.tag === Aff.Pure.tag) {
-      return Aff.Pure(f(aff._1));
-    } else {
-      return Aff.Bind(aff, function(value) {
-        return Aff.Pure(f(value));
-      });
-    }
-  };
-}
 function _bind(aff) {
   return function(k) {
     return Aff.Bind(aff, k);
@@ -5354,7 +5343,6 @@ var _delay = function() {
 var _sequential = Aff.Seq;
 
 // output-es/Effect.Aff/index.js
-var functorAff = { map: _map };
 var ffiUtil = {
   isLeft: (v) => {
     if (v.tag === "Left") {
@@ -5386,14 +5374,6 @@ var ffiUtil = {
   left: Left,
   right: Right
 };
-var monadAff = { Applicative0: () => applicativeAff, Bind1: () => bindAff };
-var bindAff = { bind: _bind, Apply0: () => applyAff };
-var applyAff = { apply: (f) => (a) => _bind(f)((f$p) => _bind(a)((a$p) => applicativeAff.pure(f$p(a$p)))), Functor0: () => functorAff };
-var applicativeAff = { pure: _pure, Apply0: () => applyAff };
-var monadEffectAff = { liftEffect: _liftEffect, Monad0: () => monadAff };
-
-// output-es/Effect.Aff.Class/index.js
-var monadAffAff = { liftAff: (x) => x, MonadEffect0: () => monadEffectAff };
 
 // output-es/Effect.Console/foreign.js
 var log2 = function(s) {
@@ -5424,8 +5404,8 @@ var keys = Object.keys || toArrayWithKey(function(k) {
 });
 
 // output-es/Node.Encoding/foreign.js
-import { Buffer as Buffer2 } from "node:buffer";
-var byteLengthImpl = (str, enc) => Buffer2.byteLength(str, enc);
+import { Buffer } from "node:buffer";
+var byteLengthImpl = (str, enc) => Buffer.byteLength(str, enc);
 
 // output-es/Node.Encoding/index.js
 var $Encoding = (tag) => tag;
@@ -5464,35 +5444,6 @@ var byteLength = (str) => (enc) => byteLengthImpl(
   })()
 );
 
-// output-es/Effect.Uncurried/foreign.js
-var mkEffectFn1 = function mkEffectFn12(fn) {
-  return function(x) {
-    return fn(x)();
-  };
-};
-
-// output-es/Node.EventEmitter/foreign.js
-var unsafeOff = (emitter, eventName, cb) => emitter.off(eventName, cb);
-var unsafeOn = (emitter, eventName, cb) => emitter.on(eventName, cb);
-var unsafeOnce = (emitter, eventName, cb) => emitter.once(eventName, cb);
-
-// output-es/Node.EventEmitter/index.js
-var $EventHandle = (_1, _2) => ({ tag: "EventHandle", _1, _2 });
-var subscribeSameFunction = (onXFn, eventEmitter, eventName, jsCb) => {
-  onXFn(eventEmitter, eventName, jsCb);
-  return () => unsafeOff(eventEmitter, eventName, jsCb);
-};
-var once = (v) => (psCb) => (eventEmitter) => {
-  const $0 = v._1;
-  const $1 = v._2(psCb);
-  return () => subscribeSameFunction(unsafeOnce, eventEmitter, $0, $1);
-};
-var on = (v) => (psCb) => (eventEmitter) => {
-  const $0 = v._1;
-  const $1 = v._2(psCb);
-  return () => subscribeSameFunction(unsafeOn, eventEmitter, $0, $1);
-};
-
 // output-es/Node.Process/foreign.js
 import process from "process";
 var abortImpl = process.abort ? () => process.abort() : null;
@@ -5511,117 +5462,6 @@ var stdinIsTTY = process.stdinIsTTY;
 var stdoutIsTTY = process.stdoutIsTTY;
 var stderrIsTTY = process.stderrIsTTY;
 var version = process.version;
-
-// output-es/Node.Buffer.Immutable/foreign.js
-import { Buffer as Buffer3 } from "node:buffer";
-var toStringImpl = (enc, buff) => buff.toString(enc);
-var concat2 = (buffs) => Buffer3.concat(buffs);
-
-// output-es/Node.Buffer.Immutable/index.js
-var toString2 = (enc) => (buf) => toStringImpl(
-  (() => {
-    if (enc === "ASCII") {
-      return "ascii";
-    }
-    if (enc === "UTF8") {
-      return "utf8";
-    }
-    if (enc === "UTF16LE") {
-      return "utf16le";
-    }
-    if (enc === "UCS2") {
-      return "ucs2";
-    }
-    if (enc === "Base64") {
-      return "base64";
-    }
-    if (enc === "Base64Url") {
-      return "base64url";
-    }
-    if (enc === "Latin1") {
-      return "latin1";
-    }
-    if (enc === "Binary") {
-      return "binary";
-    }
-    if (enc === "Hex") {
-      return "hex";
-    }
-    fail();
-  })(),
-  buf
-);
-
-// output-es/Node.Buffer/index.js
-var concat3 = (arrs) => (v) => concat2(arrs);
-
-// output-es/Node.Stream/foreign.js
-var readChunkImpl = (useBuffer, useString, chunk) => {
-  if (chunk instanceof Buffer) {
-    return useBuffer(chunk);
-  } else if (typeof chunk === "string") {
-    return useString(chunk);
-  } else {
-    throw new Error(
-      "Node.Stream.readChunkImpl: Unrecognised chunk type; expected String or Buffer, got: " + chunk
-    );
-  }
-};
-
-// output-es/Node.Stream/index.js
-var identity6 = (x) => x;
-var dataH = /* @__PURE__ */ $EventHandle(
-  "data",
-  (cb) => (chunk) => readChunkImpl(
-    ($0) => cb($0)(),
-    (v) => throwException(error("Got a String, not a Buffer. Stream encoding should not be set"))(),
-    chunk
-  )
-);
-
-// output-es/Node.Stream.Aff/index.js
-var readableToBuffers = (dictMonadAff) => (r) => dictMonadAff.liftAff(makeAff((complete) => () => {
-  const bufs = [];
-  let dataRef = () => {
-  };
-  const removeData = () => {
-    const $02 = dataRef;
-    return $02();
-  };
-  const removeError = once($EventHandle("error", mkEffectFn1))((err) => () => {
-    removeData();
-    return complete($Either("Left", err))();
-  })(r)();
-  const removeClose = once($EventHandle("close", identity6))(() => {
-    removeError();
-    removeData();
-    return complete($Either("Right", bufs))();
-  })(r)();
-  const removeEnd = once($EventHandle("end", identity6))(() => {
-    removeError();
-    removeClose();
-    removeData();
-    return complete($Either("Right", bufs))();
-  })(r)();
-  const rmData = on(dataH)((buf) => () => {
-    bufs.push(buf);
-  })(r)();
-  dataRef = rmData;
-  const $0 = _liftEffect(() => {
-    removeError();
-    removeClose();
-    removeEnd();
-    return removeData();
-  });
-  return (v) => $0;
-}));
-var readableToString = (dictMonadAff) => {
-  const MonadEffect0 = dictMonadAff.MonadEffect0();
-  return (r) => (enc) => MonadEffect0.Monad0().Bind1().bind(readableToBuffers(dictMonadAff)(r))((bufs) => MonadEffect0.liftEffect(() => {
-    const $0 = concat3(bufs)();
-    return toString2(enc)($0);
-  }));
-};
 
 // output-es/Foreign/foreign.js
 var isArray = Array.isArray || function(value) {
@@ -5651,10 +5491,10 @@ function replacer(key, value) {
 var _unsafeStringify = (data) => JSON.stringify(data, replacer);
 
 // output-es/Yoga.JSON/index.js
-var identity7 = (x) => x;
+var identity6 = (x) => x;
 var writeForeignString = { writeImpl: unsafeCoerce };
 var writeForeignInt = { writeImpl: unsafeCoerce };
-var writeForeignFieldsNilRowR = { writeImplFields: (v) => (v1) => identity7 };
+var writeForeignFieldsNilRowR = { writeImplFields: (v) => (v1) => identity6 };
 var writeJSON = (dictWriteForeign) => (x) => _unsafeStringify(dictWriteForeign.writeImpl(x));
 var writeForeignFieldsCons = (dictIsSymbol) => (dictWriteForeign) => (dictWriteForeignFields) => () => () => () => ({
   writeImplFields: (v) => (rec) => {
@@ -5790,11 +5630,11 @@ var getLabels = (v) => {
   return generateLabels(arrayBind($1.before)(identity))(arrayBind($1.after)(identity))($Tuple(0, 0))([]);
 };
 var kakouneEnvironment = /* @__PURE__ */ (() => {
-  const $0 = throwException(error("[ERROR] JumpMode: couldn't find $kak_opt_jumpContentsRange in the environment\n\n"));
+  const $0 = throwException(error("[ERROR] JumpMode: couldn't find $kak_opt_jumpContents in the environment\n\n"));
   return () => {
     const a$p = unsafeGetEnv();
-    const $1 = _lookup(Nothing, Just, "kak_opt_jumpContentsRange", a$p);
-    const desc = (() => {
+    const $1 = _lookup(Nothing, Just, "kak_opt_jumpContents", a$p);
+    const buffer = (() => {
       if ($1.tag === "Nothing") {
         return $0();
       }
@@ -5803,12 +5643,10 @@ var kakouneEnvironment = /* @__PURE__ */ (() => {
       }
       fail();
     })();
-    const v = traverse(fromString)(arrayBind(split(",")(desc))(split(".")));
-    const bufferSelection = v.tag === "Just" && v._1.length === 4 ? { startLine: v._1[0], startColumn: v._1[1], endLine: v._1[2], endColumn: v._1[3] } : throwException(error("[ERROR] JumpMode: couldn't parse selection description: " + desc + "\n"))();
-    const $2 = throwException(error("[ERROR] JumpMode: couldn't find $kak_cursor_line in the environment\n\n"));
+    const $2 = throwException(error("[ERROR] JumpMode: couldn't find $kak_opt_jumpContentsRange in the environment\n\n"));
     const a$p$1 = unsafeGetEnv();
-    const $3 = _lookup(Nothing, Just, "kak_cursor_line", a$p$1);
-    const currentLine$p = (() => {
+    const $3 = _lookup(Nothing, Just, "kak_opt_jumpContentsRange", a$p$1);
+    const desc = (() => {
       if ($3.tag === "Nothing") {
         return $2();
       }
@@ -5817,10 +5655,12 @@ var kakouneEnvironment = /* @__PURE__ */ (() => {
       }
       fail();
     })();
-    const $4 = throwException(error("[ERROR] JumpMode: couldn't find $kak_cursor_column in the environment\n\n"));
+    const v = traverse(fromString)(arrayBind(split(",")(desc))(split(".")));
+    const bufferSelection = v.tag === "Just" && v._1.length === 4 ? { startLine: v._1[0], startColumn: v._1[1], endLine: v._1[2], endColumn: v._1[3] } : throwException(error("[ERROR] JumpMode: couldn't parse selection description: " + desc + "\n"))();
+    const $4 = throwException(error("[ERROR] JumpMode: couldn't find $kak_cursor_line in the environment\n\n"));
     const a$p$2 = unsafeGetEnv();
-    const $5 = _lookup(Nothing, Just, "kak_cursor_column", a$p$2);
-    const currentColumn$p = (() => {
+    const $5 = _lookup(Nothing, Just, "kak_cursor_line", a$p$2);
+    const currentLine$p = (() => {
       if ($5.tag === "Nothing") {
         return $4();
       }
@@ -5829,10 +5669,10 @@ var kakouneEnvironment = /* @__PURE__ */ (() => {
       }
       fail();
     })();
-    const $6 = throwException(error("[ERROR] JumpMode: couldn't find $kak_opt_jumpExtraWordCharacters in the environment\n\n"));
+    const $6 = throwException(error("[ERROR] JumpMode: couldn't find $kak_cursor_column in the environment\n\n"));
     const a$p$3 = unsafeGetEnv();
-    const $7 = _lookup(Nothing, Just, "kak_opt_jumpExtraWordCharacters", a$p$3);
-    const a$p$4 = (() => {
+    const $7 = _lookup(Nothing, Just, "kak_cursor_column", a$p$3);
+    const currentColumn$p = (() => {
       if ($7.tag === "Nothing") {
         return $6();
       }
@@ -5841,38 +5681,46 @@ var kakouneEnvironment = /* @__PURE__ */ (() => {
       }
       fail();
     })();
-    const extraWordCharacters = toCodePointArray(a$p$4);
-    const $8 = throwException(error("[ERROR] JumpMode: invalid labels characters set\n"));
-    const $9 = throwException(error("[ERROR] JumpMode: couldn't find $kak_opt_jumpLabelsCharacters in the environment\n\n"));
-    const a$p$5 = unsafeGetEnv();
-    const $10 = _lookup(Nothing, Just, "kak_opt_jumpLabelsCharacters", a$p$5);
-    const $11 = (() => {
-      if ($10.tag === "Nothing") {
-        return $9();
+    const $8 = throwException(error("[ERROR] JumpMode: couldn't find $kak_opt_jumpExtraWordCharacters in the environment\n\n"));
+    const a$p$4 = unsafeGetEnv();
+    const $9 = _lookup(Nothing, Just, "kak_opt_jumpExtraWordCharacters", a$p$4);
+    const a$p$5 = (() => {
+      if ($9.tag === "Nothing") {
+        return $8();
       }
-      if ($10.tag === "Just") {
-        return $10._1;
+      if ($9.tag === "Just") {
+        return $9._1;
       }
       fail();
     })();
-    const $12 = toCodePointArray($11);
-    if ($12.length >= 10) {
+    const extraWordCharacters = toCodePointArray(a$p$5);
+    const $10 = throwException(error("[ERROR] JumpMode: invalid labels characters set\n"));
+    const $11 = throwException(error("[ERROR] JumpMode: couldn't find $kak_opt_jumpLabelsCharacters in the environment\n\n"));
+    const a$p$6 = unsafeGetEnv();
+    const $12 = _lookup(Nothing, Just, "kak_opt_jumpLabelsCharacters", a$p$6);
+    const $13 = (() => {
+      if ($12.tag === "Nothing") {
+        return $11();
+      }
+      if ($12.tag === "Just") {
+        return $12._1;
+      }
+      fail();
+    })();
+    const $14 = toCodePointArray($13);
+    if ($14.length >= 10) {
       const v$12 = fromString(currentColumn$p);
       const v12 = fromString(currentLine$p);
       if (v12.tag === "Just" && v$12.tag === "Just") {
-        const $13 = v$12._1;
-        const $14 = v12._1;
-        return (v2) => ({ buffer: v2, currentLine: $14, currentColumn: $13, labelCharset: $12, bufferSelection, extraWordCharacters });
+        return { buffer, currentLine: v12._1, currentColumn: v$12._1, labelCharset: $14, bufferSelection, extraWordCharacters };
       }
       fail();
     }
-    const labelCharset = $8();
+    const labelCharset = $10();
     const v$1 = fromString(currentColumn$p);
     const v1 = fromString(currentLine$p);
     if (v1.tag === "Just" && v$1.tag === "Just") {
-      const $13 = v$1._1;
-      const $14 = v1._1;
-      return (v2) => ({ buffer: v2, currentLine: $14, currentColumn: $13, labelCharset, bufferSelection, extraWordCharacters });
+      return { buffer, currentLine: v1._1, currentColumn: v$1._1, labelCharset, bufferSelection, extraWordCharacters };
     }
     fail();
   };
@@ -5880,10 +5728,7 @@ var kakouneEnvironment = /* @__PURE__ */ (() => {
 var main = /* @__PURE__ */ (() => {
   const $0 = _makeFiber(
     ffiUtil,
-    _bind(readableToString(monadAffAff)(stdin)(UTF8))((stdin2) => _bind(_liftEffect(() => {
-      const a$p = kakouneEnvironment();
-      return a$p(stdin2);
-    }))((env) => _liftEffect(log2(writeJSON2(getLabels(env))))))
+    _bind(_liftEffect(kakouneEnvironment))((env) => _liftEffect(log2(writeJSON2(getLabels(env)))))
   );
   return () => {
     const fiber = $0();
