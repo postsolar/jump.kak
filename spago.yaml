@@ -1,0 +1,19 @@
+package:
+  dependencies:
+    - console
+    - debug
+    - effect
+    - filterable
+    - node-fs
+    - node-process
+    - parsing
+    - prelude
+    - strings
+  name: jump-mode
+  test:
+    dependencies: []
+    main: Test.Main
+workspace:
+  extra_packages: {}
+  package_set:
+    registry: 43.3.0
