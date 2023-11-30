@@ -16,9 +16,7 @@ import Data.String.CodeUnits as SCU
 import Data.Traversable (traverse)
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
-import Effect.Aff (launchAff_)
-import Effect.Class (liftEffect)
-import Effect.Class.Console (log)
+import Effect.Console (log)
 import Effect.Exception (throw)
 import Node.Encoding (byteLength, Encoding(UTF8))
 import Node.Process (lookupEnv) as Process
@@ -26,10 +24,11 @@ import Partial.Unsafe (unsafePartial, unsafeCrashWith)
 import Yoga.JSON as JSON
 
 main ∷ Effect Unit
-main = launchAff_ do
-  env ← liftEffect kakouneEnvironment
-  let labels = getLabels env
-  log $ JSON.writeJSON labels
+main =
+  kakouneEnvironment
+    >>= getLabels
+    >>> JSON.writeJSON
+    >>> log
 
 -- | A resulting label for a position in the buffer, like `cfx`.
 type Label =

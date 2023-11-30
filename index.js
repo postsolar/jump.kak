@@ -94,11 +94,6 @@ var applyMaybe = {
 };
 var applicativeMaybe = { pure: Just, Apply0: () => applyMaybe };
 
-// output-es/Data.Either/index.js
-var $Either = (tag, _1) => ({ tag, _1 });
-var Left = (value0) => $Either("Left", value0);
-var Right = (value0) => $Either("Right", value0);
-
 // output-es/Control.Monad.ST.Uncurried/foreign.js
 var runSTFn2 = function runSTFn22(fn) {
   return function(a) {
@@ -4461,8 +4456,15 @@ var fromCodePointArray = /* @__PURE__ */ _fromCodePointArray(singletonFallback);
 var singleton2 = /* @__PURE__ */ _singleton(singletonFallback);
 var eqCodePoint = { eq: (x) => (y) => x === y };
 
+// output-es/Effect.Console/foreign.js
+var log2 = function(s) {
+  return function() {
+    console.log(s);
+  };
+};
+
 // output-es/Effect.Exception/foreign.js
-function error(msg) {
+function error2(msg) {
   return new Error(msg);
 }
 function throwException(e) {
@@ -4470,917 +4472,6 @@ function throwException(e) {
     throw e;
   };
 }
-
-// output-es/Partial/foreign.js
-var _crashWith = function(msg) {
-  throw new Error(msg);
-};
-
-// output-es/Effect.Aff/foreign.js
-var Aff = function() {
-  var EMPTY = {};
-  var PURE = "Pure";
-  var THROW = "Throw";
-  var CATCH = "Catch";
-  var SYNC = "Sync";
-  var ASYNC = "Async";
-  var BIND = "Bind";
-  var BRACKET = "Bracket";
-  var FORK = "Fork";
-  var SEQ = "Sequential";
-  var MAP = "Map";
-  var APPLY = "Apply";
-  var ALT = "Alt";
-  var CONS = "Cons";
-  var RESUME = "Resume";
-  var RELEASE = "Release";
-  var FINALIZER = "Finalizer";
-  var FINALIZED = "Finalized";
-  var FORKED = "Forked";
-  var FIBER = "Fiber";
-  var THUNK = "Thunk";
-  function Aff2(tag, _1, _2, _3) {
-    this.tag = tag;
-    this._1 = _1;
-    this._2 = _2;
-    this._3 = _3;
-  }
-  function AffCtr(tag) {
-    var fn = function(_1, _2, _3) {
-      return new Aff2(tag, _1, _2, _3);
-    };
-    fn.tag = tag;
-    return fn;
-  }
-  function nonCanceler(error3) {
-    return new Aff2(PURE, void 0);
-  }
-  function runEff(eff) {
-    try {
-      eff();
-    } catch (error3) {
-      setTimeout(function() {
-        throw error3;
-      }, 0);
-    }
-  }
-  function runSync(left, right, eff) {
-    try {
-      return right(eff());
-    } catch (error3) {
-      return left(error3);
-    }
-  }
-  function runAsync(left, eff, k) {
-    try {
-      return eff(k)();
-    } catch (error3) {
-      k(left(error3))();
-      return nonCanceler;
-    }
-  }
-  var Scheduler = function() {
-    var limit = 1024;
-    var size2 = 0;
-    var ix = 0;
-    var queue = new Array(limit);
-    var draining = false;
-    function drain() {
-      var thunk;
-      draining = true;
-      while (size2 !== 0) {
-        size2--;
-        thunk = queue[ix];
-        queue[ix] = void 0;
-        ix = (ix + 1) % limit;
-        thunk();
-      }
-      draining = false;
-    }
-    return {
-      isDraining: function() {
-        return draining;
-      },
-      enqueue: function(cb) {
-        var i, tmp;
-        if (size2 === limit) {
-          tmp = draining;
-          drain();
-          draining = tmp;
-        }
-        queue[(ix + size2) % limit] = cb;
-        size2++;
-        if (!draining) {
-          drain();
-        }
-      }
-    };
-  }();
-  function Supervisor(util) {
-    var fibers = {};
-    var fiberId = 0;
-    var count = 0;
-    return {
-      register: function(fiber) {
-        var fid = fiberId++;
-        fiber.onComplete({
-          rethrow: true,
-          handler: function(result) {
-            return function() {
-              count--;
-              delete fibers[fid];
-            };
-          }
-        })();
-        fibers[fid] = fiber;
-        count++;
-      },
-      isEmpty: function() {
-        return count === 0;
-      },
-      killAll: function(killError, cb) {
-        return function() {
-          if (count === 0) {
-            return cb();
-          }
-          var killCount = 0;
-          var kills = {};
-          function kill(fid) {
-            kills[fid] = fibers[fid].kill(killError, function(result) {
-              return function() {
-                delete kills[fid];
-                killCount--;
-                if (util.isLeft(result) && util.fromLeft(result)) {
-                  setTimeout(function() {
-                    throw util.fromLeft(result);
-                  }, 0);
-                }
-                if (killCount === 0) {
-                  cb();
-                }
-              };
-            })();
-          }
-          for (var k in fibers) {
-            if (fibers.hasOwnProperty(k)) {
-              killCount++;
-              kill(k);
-            }
-          }
-          fibers = {};
-          fiberId = 0;
-          count = 0;
-          return function(error3) {
-            return new Aff2(SYNC, function() {
-              for (var k2 in kills) {
-                if (kills.hasOwnProperty(k2)) {
-                  kills[k2]();
-                }
-              }
-            });
-          };
-        };
-      }
-    };
-  }
-  var SUSPENDED = 0;
-  var CONTINUE = 1;
-  var STEP_BIND = 2;
-  var STEP_RESULT = 3;
-  var PENDING = 4;
-  var RETURN = 5;
-  var COMPLETED = 6;
-  function Fiber(util, supervisor, aff) {
-    var runTick = 0;
-    var status = SUSPENDED;
-    var step = aff;
-    var fail2 = null;
-    var interrupt = null;
-    var bhead = null;
-    var btail = null;
-    var attempts = null;
-    var bracketCount = 0;
-    var joinId = 0;
-    var joins = null;
-    var rethrow = true;
-    function run2(localRunTick) {
-      var tmp, result, attempt;
-      while (true) {
-        tmp = null;
-        result = null;
-        attempt = null;
-        switch (status) {
-          case STEP_BIND:
-            status = CONTINUE;
-            try {
-              step = bhead(step);
-              if (btail === null) {
-                bhead = null;
-              } else {
-                bhead = btail._1;
-                btail = btail._2;
-              }
-            } catch (e) {
-              status = RETURN;
-              fail2 = util.left(e);
-              step = null;
-            }
-            break;
-          case STEP_RESULT:
-            if (util.isLeft(step)) {
-              status = RETURN;
-              fail2 = step;
-              step = null;
-            } else if (bhead === null) {
-              status = RETURN;
-            } else {
-              status = STEP_BIND;
-              step = util.fromRight(step);
-            }
-            break;
-          case CONTINUE:
-            switch (step.tag) {
-              case BIND:
-                if (bhead) {
-                  btail = new Aff2(CONS, bhead, btail);
-                }
-                bhead = step._2;
-                status = CONTINUE;
-                step = step._1;
-                break;
-              case PURE:
-                if (bhead === null) {
-                  status = RETURN;
-                  step = util.right(step._1);
-                } else {
-                  status = STEP_BIND;
-                  step = step._1;
-                }
-                break;
-              case SYNC:
-                status = STEP_RESULT;
-                step = runSync(util.left, util.right, step._1);
-                break;
-              case ASYNC:
-                status = PENDING;
-                step = runAsync(util.left, step._1, function(result2) {
-                  return function() {
-                    if (runTick !== localRunTick) {
-                      return;
-                    }
-                    runTick++;
-                    Scheduler.enqueue(function() {
-                      if (runTick !== localRunTick + 1) {
-                        return;
-                      }
-                      status = STEP_RESULT;
-                      step = result2;
-                      run2(runTick);
-                    });
-                  };
-                });
-                return;
-              case THROW:
-                status = RETURN;
-                fail2 = util.left(step._1);
-                step = null;
-                break;
-              case CATCH:
-                if (bhead === null) {
-                  attempts = new Aff2(CONS, step, attempts, interrupt);
-                } else {
-                  attempts = new Aff2(CONS, step, new Aff2(CONS, new Aff2(RESUME, bhead, btail), attempts, interrupt), interrupt);
-                }
-                bhead = null;
-                btail = null;
-                status = CONTINUE;
-                step = step._1;
-                break;
-              case BRACKET:
-                bracketCount++;
-                if (bhead === null) {
-                  attempts = new Aff2(CONS, step, attempts, interrupt);
-                } else {
-                  attempts = new Aff2(CONS, step, new Aff2(CONS, new Aff2(RESUME, bhead, btail), attempts, interrupt), interrupt);
-                }
-                bhead = null;
-                btail = null;
-                status = CONTINUE;
-                step = step._1;
-                break;
-              case FORK:
-                status = STEP_RESULT;
-                tmp = Fiber(util, supervisor, step._2);
-                if (supervisor) {
-                  supervisor.register(tmp);
-                }
-                if (step._1) {
-                  tmp.run();
-                }
-                step = util.right(tmp);
-                break;
-              case SEQ:
-                status = CONTINUE;
-                step = sequential(util, supervisor, step._1);
-                break;
-            }
-            break;
-          case RETURN:
-            bhead = null;
-            btail = null;
-            if (attempts === null) {
-              status = COMPLETED;
-              step = interrupt || fail2 || step;
-            } else {
-              tmp = attempts._3;
-              attempt = attempts._1;
-              attempts = attempts._2;
-              switch (attempt.tag) {
-                case CATCH:
-                  if (interrupt && interrupt !== tmp && bracketCount === 0) {
-                    status = RETURN;
-                  } else if (fail2) {
-                    status = CONTINUE;
-                    step = attempt._2(util.fromLeft(fail2));
-                    fail2 = null;
-                  }
-                  break;
-                case RESUME:
-                  if (interrupt && interrupt !== tmp && bracketCount === 0 || fail2) {
-                    status = RETURN;
-                  } else {
-                    bhead = attempt._1;
-                    btail = attempt._2;
-                    status = STEP_BIND;
-                    step = util.fromRight(step);
-                  }
-                  break;
-                case BRACKET:
-                  bracketCount--;
-                  if (fail2 === null) {
-                    result = util.fromRight(step);
-                    attempts = new Aff2(CONS, new Aff2(RELEASE, attempt._2, result), attempts, tmp);
-                    if (interrupt === tmp || bracketCount > 0) {
-                      status = CONTINUE;
-                      step = attempt._3(result);
-                    }
-                  }
-                  break;
-                case RELEASE:
-                  attempts = new Aff2(CONS, new Aff2(FINALIZED, step, fail2), attempts, interrupt);
-                  status = CONTINUE;
-                  if (interrupt && interrupt !== tmp && bracketCount === 0) {
-                    step = attempt._1.killed(util.fromLeft(interrupt))(attempt._2);
-                  } else if (fail2) {
-                    step = attempt._1.failed(util.fromLeft(fail2))(attempt._2);
-                  } else {
-                    step = attempt._1.completed(util.fromRight(step))(attempt._2);
-                  }
-                  fail2 = null;
-                  bracketCount++;
-                  break;
-                case FINALIZER:
-                  bracketCount++;
-                  attempts = new Aff2(CONS, new Aff2(FINALIZED, step, fail2), attempts, interrupt);
-                  status = CONTINUE;
-                  step = attempt._1;
-                  break;
-                case FINALIZED:
-                  bracketCount--;
-                  status = RETURN;
-                  step = attempt._1;
-                  fail2 = attempt._2;
-                  break;
-              }
-            }
-            break;
-          case COMPLETED:
-            for (var k in joins) {
-              if (joins.hasOwnProperty(k)) {
-                rethrow = rethrow && joins[k].rethrow;
-                runEff(joins[k].handler(step));
-              }
-            }
-            joins = null;
-            if (interrupt && fail2) {
-              setTimeout(function() {
-                throw util.fromLeft(fail2);
-              }, 0);
-            } else if (util.isLeft(step) && rethrow) {
-              setTimeout(function() {
-                if (rethrow) {
-                  throw util.fromLeft(step);
-                }
-              }, 0);
-            }
-            return;
-          case SUSPENDED:
-            status = CONTINUE;
-            break;
-          case PENDING:
-            return;
-        }
-      }
-    }
-    function onComplete(join2) {
-      return function() {
-        if (status === COMPLETED) {
-          rethrow = rethrow && join2.rethrow;
-          join2.handler(step)();
-          return function() {
-          };
-        }
-        var jid = joinId++;
-        joins = joins || {};
-        joins[jid] = join2;
-        return function() {
-          if (joins !== null) {
-            delete joins[jid];
-          }
-        };
-      };
-    }
-    function kill(error3, cb) {
-      return function() {
-        if (status === COMPLETED) {
-          cb(util.right(void 0))();
-          return function() {
-          };
-        }
-        var canceler = onComplete({
-          rethrow: false,
-          handler: function() {
-            return cb(util.right(void 0));
-          }
-        })();
-        switch (status) {
-          case SUSPENDED:
-            interrupt = util.left(error3);
-            status = COMPLETED;
-            step = interrupt;
-            run2(runTick);
-            break;
-          case PENDING:
-            if (interrupt === null) {
-              interrupt = util.left(error3);
-            }
-            if (bracketCount === 0) {
-              if (status === PENDING) {
-                attempts = new Aff2(CONS, new Aff2(FINALIZER, step(error3)), attempts, interrupt);
-              }
-              status = RETURN;
-              step = null;
-              fail2 = null;
-              run2(++runTick);
-            }
-            break;
-          default:
-            if (interrupt === null) {
-              interrupt = util.left(error3);
-            }
-            if (bracketCount === 0) {
-              status = RETURN;
-              step = null;
-              fail2 = null;
-            }
-        }
-        return canceler;
-      };
-    }
-    function join(cb) {
-      return function() {
-        var canceler = onComplete({
-          rethrow: false,
-          handler: cb
-        })();
-        if (status === SUSPENDED) {
-          run2(runTick);
-        }
-        return canceler;
-      };
-    }
-    return {
-      kill,
-      join,
-      onComplete,
-      isSuspended: function() {
-        return status === SUSPENDED;
-      },
-      run: function() {
-        if (status === SUSPENDED) {
-          if (!Scheduler.isDraining()) {
-            Scheduler.enqueue(function() {
-              run2(runTick);
-            });
-          } else {
-            run2(runTick);
-          }
-        }
-      }
-    };
-  }
-  function runPar(util, supervisor, par, cb) {
-    var fiberId = 0;
-    var fibers = {};
-    var killId = 0;
-    var kills = {};
-    var early = new Error("[ParAff] Early exit");
-    var interrupt = null;
-    var root = EMPTY;
-    function kill(error3, par2, cb2) {
-      var step = par2;
-      var head = null;
-      var tail = null;
-      var count = 0;
-      var kills2 = {};
-      var tmp, kid;
-      loop:
-        while (true) {
-          tmp = null;
-          switch (step.tag) {
-            case FORKED:
-              if (step._3 === EMPTY) {
-                tmp = fibers[step._1];
-                kills2[count++] = tmp.kill(error3, function(result) {
-                  return function() {
-                    count--;
-                    if (count === 0) {
-                      cb2(result)();
-                    }
-                  };
-                });
-              }
-              if (head === null) {
-                break loop;
-              }
-              step = head._2;
-              if (tail === null) {
-                head = null;
-              } else {
-                head = tail._1;
-                tail = tail._2;
-              }
-              break;
-            case MAP:
-              step = step._2;
-              break;
-            case APPLY:
-            case ALT:
-              if (head) {
-                tail = new Aff2(CONS, head, tail);
-              }
-              head = step;
-              step = step._1;
-              break;
-          }
-        }
-      if (count === 0) {
-        cb2(util.right(void 0))();
-      } else {
-        kid = 0;
-        tmp = count;
-        for (; kid < tmp; kid++) {
-          kills2[kid] = kills2[kid]();
-        }
-      }
-      return kills2;
-    }
-    function join(result, head, tail) {
-      var fail2, step, lhs, rhs, tmp, kid;
-      if (util.isLeft(result)) {
-        fail2 = result;
-        step = null;
-      } else {
-        step = result;
-        fail2 = null;
-      }
-      loop:
-        while (true) {
-          lhs = null;
-          rhs = null;
-          tmp = null;
-          kid = null;
-          if (interrupt !== null) {
-            return;
-          }
-          if (head === null) {
-            cb(fail2 || step)();
-            return;
-          }
-          if (head._3 !== EMPTY) {
-            return;
-          }
-          switch (head.tag) {
-            case MAP:
-              if (fail2 === null) {
-                head._3 = util.right(head._1(util.fromRight(step)));
-                step = head._3;
-              } else {
-                head._3 = fail2;
-              }
-              break;
-            case APPLY:
-              lhs = head._1._3;
-              rhs = head._2._3;
-              if (fail2) {
-                head._3 = fail2;
-                tmp = true;
-                kid = killId++;
-                kills[kid] = kill(early, fail2 === lhs ? head._2 : head._1, function() {
-                  return function() {
-                    delete kills[kid];
-                    if (tmp) {
-                      tmp = false;
-                    } else if (tail === null) {
-                      join(fail2, null, null);
-                    } else {
-                      join(fail2, tail._1, tail._2);
-                    }
-                  };
-                });
-                if (tmp) {
-                  tmp = false;
-                  return;
-                }
-              } else if (lhs === EMPTY || rhs === EMPTY) {
-                return;
-              } else {
-                step = util.right(util.fromRight(lhs)(util.fromRight(rhs)));
-                head._3 = step;
-              }
-              break;
-            case ALT:
-              lhs = head._1._3;
-              rhs = head._2._3;
-              if (lhs === EMPTY && util.isLeft(rhs) || rhs === EMPTY && util.isLeft(lhs)) {
-                return;
-              }
-              if (lhs !== EMPTY && util.isLeft(lhs) && rhs !== EMPTY && util.isLeft(rhs)) {
-                fail2 = step === lhs ? rhs : lhs;
-                step = null;
-                head._3 = fail2;
-              } else {
-                head._3 = step;
-                tmp = true;
-                kid = killId++;
-                kills[kid] = kill(early, step === lhs ? head._2 : head._1, function() {
-                  return function() {
-                    delete kills[kid];
-                    if (tmp) {
-                      tmp = false;
-                    } else if (tail === null) {
-                      join(step, null, null);
-                    } else {
-                      join(step, tail._1, tail._2);
-                    }
-                  };
-                });
-                if (tmp) {
-                  tmp = false;
-                  return;
-                }
-              }
-              break;
-          }
-          if (tail === null) {
-            head = null;
-          } else {
-            head = tail._1;
-            tail = tail._2;
-          }
-        }
-    }
-    function resolve(fiber) {
-      return function(result) {
-        return function() {
-          delete fibers[fiber._1];
-          fiber._3 = result;
-          join(result, fiber._2._1, fiber._2._2);
-        };
-      };
-    }
-    function run2() {
-      var status = CONTINUE;
-      var step = par;
-      var head = null;
-      var tail = null;
-      var tmp, fid;
-      loop:
-        while (true) {
-          tmp = null;
-          fid = null;
-          switch (status) {
-            case CONTINUE:
-              switch (step.tag) {
-                case MAP:
-                  if (head) {
-                    tail = new Aff2(CONS, head, tail);
-                  }
-                  head = new Aff2(MAP, step._1, EMPTY, EMPTY);
-                  step = step._2;
-                  break;
-                case APPLY:
-                  if (head) {
-                    tail = new Aff2(CONS, head, tail);
-                  }
-                  head = new Aff2(APPLY, EMPTY, step._2, EMPTY);
-                  step = step._1;
-                  break;
-                case ALT:
-                  if (head) {
-                    tail = new Aff2(CONS, head, tail);
-                  }
-                  head = new Aff2(ALT, EMPTY, step._2, EMPTY);
-                  step = step._1;
-                  break;
-                default:
-                  fid = fiberId++;
-                  status = RETURN;
-                  tmp = step;
-                  step = new Aff2(FORKED, fid, new Aff2(CONS, head, tail), EMPTY);
-                  tmp = Fiber(util, supervisor, tmp);
-                  tmp.onComplete({
-                    rethrow: false,
-                    handler: resolve(step)
-                  })();
-                  fibers[fid] = tmp;
-                  if (supervisor) {
-                    supervisor.register(tmp);
-                  }
-              }
-              break;
-            case RETURN:
-              if (head === null) {
-                break loop;
-              }
-              if (head._1 === EMPTY) {
-                head._1 = step;
-                status = CONTINUE;
-                step = head._2;
-                head._2 = EMPTY;
-              } else {
-                head._2 = step;
-                step = head;
-                if (tail === null) {
-                  head = null;
-                } else {
-                  head = tail._1;
-                  tail = tail._2;
-                }
-              }
-          }
-        }
-      root = step;
-      for (fid = 0; fid < fiberId; fid++) {
-        fibers[fid].run();
-      }
-    }
-    function cancel(error3, cb2) {
-      interrupt = util.left(error3);
-      var innerKills;
-      for (var kid in kills) {
-        if (kills.hasOwnProperty(kid)) {
-          innerKills = kills[kid];
-          for (kid in innerKills) {
-            if (innerKills.hasOwnProperty(kid)) {
-              innerKills[kid]();
-            }
-          }
-        }
-      }
-      kills = null;
-      var newKills = kill(error3, root, cb2);
-      return function(killError) {
-        return new Aff2(ASYNC, function(killCb) {
-          return function() {
-            for (var kid2 in newKills) {
-              if (newKills.hasOwnProperty(kid2)) {
-                newKills[kid2]();
-              }
-            }
-            return nonCanceler;
-          };
-        });
-      };
-    }
-    run2();
-    return function(killError) {
-      return new Aff2(ASYNC, function(killCb) {
-        return function() {
-          return cancel(killError, killCb);
-        };
-      });
-    };
-  }
-  function sequential(util, supervisor, par) {
-    return new Aff2(ASYNC, function(cb) {
-      return function() {
-        return runPar(util, supervisor, par, cb);
-      };
-    });
-  }
-  Aff2.EMPTY = EMPTY;
-  Aff2.Pure = AffCtr(PURE);
-  Aff2.Throw = AffCtr(THROW);
-  Aff2.Catch = AffCtr(CATCH);
-  Aff2.Sync = AffCtr(SYNC);
-  Aff2.Async = AffCtr(ASYNC);
-  Aff2.Bind = AffCtr(BIND);
-  Aff2.Bracket = AffCtr(BRACKET);
-  Aff2.Fork = AffCtr(FORK);
-  Aff2.Seq = AffCtr(SEQ);
-  Aff2.ParMap = AffCtr(MAP);
-  Aff2.ParApply = AffCtr(APPLY);
-  Aff2.ParAlt = AffCtr(ALT);
-  Aff2.Fiber = Fiber;
-  Aff2.Supervisor = Supervisor;
-  Aff2.Scheduler = Scheduler;
-  Aff2.nonCanceler = nonCanceler;
-  return Aff2;
-}();
-var _pure = Aff.Pure;
-var _throwError = Aff.Throw;
-function _bind(aff) {
-  return function(k) {
-    return Aff.Bind(aff, k);
-  };
-}
-var _liftEffect = Aff.Sync;
-var makeAff = Aff.Async;
-function _makeFiber(util, aff) {
-  return function() {
-    return Aff.Fiber(util, null, aff);
-  };
-}
-var _delay = function() {
-  function setDelay(n, k) {
-    if (n === 0 && typeof setImmediate !== "undefined") {
-      return setImmediate(k);
-    } else {
-      return setTimeout(k, n);
-    }
-  }
-  function clearDelay(n, t) {
-    if (n === 0 && typeof clearImmediate !== "undefined") {
-      return clearImmediate(t);
-    } else {
-      return clearTimeout(t);
-    }
-  }
-  return function(right, ms) {
-    return Aff.Async(function(cb) {
-      return function() {
-        var timer = setDelay(ms, cb(right()));
-        return function() {
-          return Aff.Sync(function() {
-            return right(clearDelay(ms, timer));
-          });
-        };
-      };
-    });
-  };
-}();
-var _sequential = Aff.Seq;
-
-// output-es/Effect.Aff/index.js
-var ffiUtil = {
-  isLeft: (v) => {
-    if (v.tag === "Left") {
-      return true;
-    }
-    if (v.tag === "Right") {
-      return false;
-    }
-    fail();
-  },
-  fromLeft: (v) => {
-    if (v.tag === "Left") {
-      return v._1;
-    }
-    if (v.tag === "Right") {
-      return _crashWith("unsafeFromLeft: Right");
-    }
-    fail();
-  },
-  fromRight: (v) => {
-    if (v.tag === "Right") {
-      return v._1;
-    }
-    if (v.tag === "Left") {
-      return _crashWith("unsafeFromRight: Left");
-    }
-    fail();
-  },
-  left: Left,
-  right: Right
-};
-
-// output-es/Effect.Console/foreign.js
-var log2 = function(s) {
-  return function() {
-    console.log(s);
-  };
-};
 
 // output-es/Foreign.Object/foreign.js
 function _lookup(no, yes, k, m) {
@@ -5463,6 +4554,11 @@ var stdoutIsTTY = process.stdoutIsTTY;
 var stderrIsTTY = process.stderrIsTTY;
 var version = process.version;
 
+// output-es/Partial/foreign.js
+var _crashWith = function(msg) {
+  throw new Error(msg);
+};
+
 // output-es/Foreign/foreign.js
 var isArray = Array.isArray || function(value) {
   return Object.prototype.toString.call(value) === "[object Array]";
@@ -5491,10 +4587,10 @@ function replacer(key, value) {
 var _unsafeStringify = (data) => JSON.stringify(data, replacer);
 
 // output-es/Yoga.JSON/index.js
-var identity6 = (x) => x;
+var identity5 = (x) => x;
 var writeForeignString = { writeImpl: unsafeCoerce };
 var writeForeignInt = { writeImpl: unsafeCoerce };
-var writeForeignFieldsNilRowR = { writeImplFields: (v) => (v1) => identity6 };
+var writeForeignFieldsNilRowR = { writeImplFields: (v) => (v1) => identity5 };
 var writeJSON = (dictWriteForeign) => (x) => _unsafeStringify(dictWriteForeign.writeImpl(x));
 var writeForeignFieldsCons = (dictIsSymbol) => (dictWriteForeign) => (dictWriteForeignFields) => () => () => () => ({
   writeImplFields: (v) => (rec) => {
@@ -5519,14 +4615,6 @@ var min2 = (x) => (y) => {
   fail();
 };
 var traverse = /* @__PURE__ */ (() => traversableArray.traverse(applicativeMaybe))();
-var writeJSON2 = /* @__PURE__ */ writeJSON(/* @__PURE__ */ (() => {
-  const $0 = writeForeignFieldsCons({ reflectSymbol: () => "byteLength" })(writeForeignInt)(writeForeignFieldsCons({
-    reflectSymbol: () => "bytePosition"
-  })(writeForeignInt)(writeForeignFieldsCons({ reflectSymbol: () => "column" })(writeForeignInt)(writeForeignFieldsCons({
-    reflectSymbol: () => "label"
-  })(writeForeignString)(writeForeignFieldsCons({ reflectSymbol: () => "line" })(writeForeignInt)(writeForeignFieldsNilRowR)()()())()()())()()())()()())()()();
-  return { writeImpl: (xs) => arrayMap((rec) => $0.writeImplFields($$Proxy)(rec)({}))(xs) };
-})());
 var getLabels = (v) => {
   const $0 = v.labelCharset;
   const nextLabel = (v1) => {
@@ -5630,7 +4718,7 @@ var getLabels = (v) => {
   return generateLabels(arrayBind($1.before)(identity))(arrayBind($1.after)(identity))($Tuple(0, 0))([]);
 };
 var kakouneEnvironment = /* @__PURE__ */ (() => {
-  const $0 = throwException(error("[ERROR] JumpMode: couldn't find $kak_opt_jumpContents in the environment\n\n"));
+  const $0 = throwException(error2("[ERROR] JumpMode: couldn't find $kak_opt_jumpContents in the environment\n\n"));
   return () => {
     const a$p = unsafeGetEnv();
     const $1 = _lookup(Nothing, Just, "kak_opt_jumpContents", a$p);
@@ -5643,7 +4731,7 @@ var kakouneEnvironment = /* @__PURE__ */ (() => {
       }
       fail();
     })();
-    const $2 = throwException(error("[ERROR] JumpMode: couldn't find $kak_opt_jumpContentsRange in the environment\n\n"));
+    const $2 = throwException(error2("[ERROR] JumpMode: couldn't find $kak_opt_jumpContentsRange in the environment\n\n"));
     const a$p$1 = unsafeGetEnv();
     const $3 = _lookup(Nothing, Just, "kak_opt_jumpContentsRange", a$p$1);
     const desc = (() => {
@@ -5656,8 +4744,8 @@ var kakouneEnvironment = /* @__PURE__ */ (() => {
       fail();
     })();
     const v = traverse(fromString)(arrayBind(split(",")(desc))(split(".")));
-    const bufferSelection = v.tag === "Just" && v._1.length === 4 ? { startLine: v._1[0], startColumn: v._1[1], endLine: v._1[2], endColumn: v._1[3] } : throwException(error("[ERROR] JumpMode: couldn't parse selection description: " + desc + "\n"))();
-    const $4 = throwException(error("[ERROR] JumpMode: couldn't find $kak_cursor_line in the environment\n\n"));
+    const bufferSelection = v.tag === "Just" && v._1.length === 4 ? { startLine: v._1[0], startColumn: v._1[1], endLine: v._1[2], endColumn: v._1[3] } : throwException(error2("[ERROR] JumpMode: couldn't parse selection description: " + desc + "\n"))();
+    const $4 = throwException(error2("[ERROR] JumpMode: couldn't find $kak_cursor_line in the environment\n\n"));
     const a$p$2 = unsafeGetEnv();
     const $5 = _lookup(Nothing, Just, "kak_cursor_line", a$p$2);
     const currentLine$p = (() => {
@@ -5669,7 +4757,7 @@ var kakouneEnvironment = /* @__PURE__ */ (() => {
       }
       fail();
     })();
-    const $6 = throwException(error("[ERROR] JumpMode: couldn't find $kak_cursor_column in the environment\n\n"));
+    const $6 = throwException(error2("[ERROR] JumpMode: couldn't find $kak_cursor_column in the environment\n\n"));
     const a$p$3 = unsafeGetEnv();
     const $7 = _lookup(Nothing, Just, "kak_cursor_column", a$p$3);
     const currentColumn$p = (() => {
@@ -5681,7 +4769,7 @@ var kakouneEnvironment = /* @__PURE__ */ (() => {
       }
       fail();
     })();
-    const $8 = throwException(error("[ERROR] JumpMode: couldn't find $kak_opt_jumpExtraWordCharacters in the environment\n\n"));
+    const $8 = throwException(error2("[ERROR] JumpMode: couldn't find $kak_opt_jumpExtraWordCharacters in the environment\n\n"));
     const a$p$4 = unsafeGetEnv();
     const $9 = _lookup(Nothing, Just, "kak_opt_jumpExtraWordCharacters", a$p$4);
     const a$p$5 = (() => {
@@ -5694,8 +4782,8 @@ var kakouneEnvironment = /* @__PURE__ */ (() => {
       fail();
     })();
     const extraWordCharacters = toCodePointArray(a$p$5);
-    const $10 = throwException(error("[ERROR] JumpMode: invalid labels characters set\n"));
-    const $11 = throwException(error("[ERROR] JumpMode: couldn't find $kak_opt_jumpLabelsCharacters in the environment\n\n"));
+    const $10 = throwException(error2("[ERROR] JumpMode: invalid labels characters set\n"));
+    const $11 = throwException(error2("[ERROR] JumpMode: couldn't find $kak_opt_jumpLabelsCharacters in the environment\n\n"));
     const a$p$6 = unsafeGetEnv();
     const $12 = _lookup(Nothing, Just, "kak_opt_jumpLabelsCharacters", a$p$6);
     const $13 = (() => {
@@ -5726,13 +4814,17 @@ var kakouneEnvironment = /* @__PURE__ */ (() => {
   };
 })();
 var main = /* @__PURE__ */ (() => {
-  const $0 = _makeFiber(
-    ffiUtil,
-    _bind(_liftEffect(kakouneEnvironment))((env) => _liftEffect(log2(writeJSON2(getLabels(env)))))
-  );
+  const $0 = writeJSON((() => {
+    const $02 = writeForeignFieldsCons({ reflectSymbol: () => "byteLength" })(writeForeignInt)(writeForeignFieldsCons({
+      reflectSymbol: () => "bytePosition"
+    })(writeForeignInt)(writeForeignFieldsCons({ reflectSymbol: () => "column" })(writeForeignInt)(writeForeignFieldsCons({
+      reflectSymbol: () => "label"
+    })(writeForeignString)(writeForeignFieldsCons({ reflectSymbol: () => "line" })(writeForeignInt)(writeForeignFieldsNilRowR)()()())()()())()()())()()())()()();
+    return { writeImpl: (xs) => arrayMap((rec) => $02.writeImplFields($$Proxy)(rec)({}))(xs) };
+  })());
   return () => {
-    const fiber = $0();
-    fiber.run();
+    const $1 = kakouneEnvironment();
+    return log2($0(getLabels($1)))();
   };
 })();
 
