@@ -6,8 +6,9 @@ declare-option -docstring "
 
 declare-option -docstring "
   Additional characters, aside from alphanumerics, to consider as part of contiguous words for generating labels.
+  By default it's tied to `%opt{extra_word_chars}`. Modify it if you need greater flexibility.
   " str \
-  jumpExtraWordCharacters "_-"
+  jumpExtraWordCharacters %sh{ printf %s $kak_opt_extra_word_chars }
 
 declare-option -docstring "
   Face to use for highlighting jump labels. Set to `default` to not apply any highlighting at all.

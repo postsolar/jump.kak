@@ -57,7 +57,7 @@ Default value: `"abcdefghijklmnopqrstuvwxyz"`
 2. **jumpExtraWordCharacters**
 Additional characters, aside from alphanumerics, to consider as part of contiguous words for generating labels.
 
-Default value: `"_-"`
+Default value: `%opt{extra_word_chars}`
 
 3. **jumpLabelFace**
 Face to use for highlighting jump labels.
