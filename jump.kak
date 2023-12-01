@@ -117,8 +117,14 @@ define-command -hidden jumpOnPromptChange %{
       const jumpLabels = JSON.parse('$kak_opt_jumpLabelsPositions')
       const targetLabel = jumpLabels.find(label => label.label === '$kak_text')
       if (targetLabel === undefined) process.exit()
-      // console.log('execute-keys <esc> ' + targetLabel.line + 'g ' + (targetLabel.column - 1) + 'l eb')
-      console.log('execute-keys <esc> ' + targetLabel.line + 'g ' + (targetLabel.column - 1) + 'l he')
+
+      const toTargetLine =
+        ( targetLabel.line > $kak_cursor_line
+            ? (targetLabel.line - $kak_cursor_line) + 'j gh'
+            : ($kak_cursor_line - targetLabel.line) + 'k gh'
+        ).replace(/^0\w gh$/, 'gh')
+
+      console.log('execute-keys <esc> ' + toTargetLine + (targetLabel.column - 1) + 'l he')
     "
   }
 }
@@ -142,10 +148,21 @@ define-command -hidden jumpExtendOnPromptChange %{
           || (targetLabel.line === $kak_cursor_line && targetLabel.column > $kak_cursor_column)
 
       const flipSelection =
-        $kak_opt_jumpAutoFlipOnExtend
-          && selOrientedForward !== jumpIsForward
+        $kak_opt_jumpAutoFlipOnExtend && selOrientedForward !== jumpIsForward
           ? '<a-semicolon>'
           : ''
+
+      const lineWiseMoves =
+        ( targetLabel.line > $kak_cursor_line && selOrientedForward
+          ? (targetLabel.line - $kak_cursor_line) + 'J'
+        : targetLabel.line > $kak_cursor_line
+          ? (targetLabel.line - $kak_cursor_line - (selStartLine - selEndLine)) + 'J'
+        : targetLabel.line < $kak_cursor_line && !selOrientedForward
+          ? ($kak_cursor_line - targetLabel.line) + 'K'
+        : targetLabel.line < $kak_cursor_line
+          ? ($kak_cursor_line - targetLabel.line - (selEndLine - selStartLine)) + 'K'
+        : ''
+        ).replace(/^0\w$/, '')
 
       const extendRight =
         targetLabel.column === 1 && !jumpIsForward
@@ -153,7 +170,7 @@ define-command -hidden jumpExtendOnPromptChange %{
           : (targetLabel.column - 1) + 'L'
 
       const lastKeyPress = jumpIsForward ? 'E' : ''
-      console.log('execute-keys <esc> ' + flipSelection + targetLabel.line + 'G' + extendRight + lastKeyPress)
+      console.log('execute-keys <esc> ' + flipSelection + lineWiseMoves + '<a-H>' + extendRight + lastKeyPress)
     "
   }
 }
