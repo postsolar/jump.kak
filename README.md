@@ -4,10 +4,12 @@
 
 ## Differences from existing alternatives
 
+- No known bugs
 - Handling of text with multi-byte (Unicode) characters
 - Dimmed text when entering jump mode (face used is configurable)
 - Highlighted labels (face used is configurable)
 - Jumps in both directions with single command
+- You can make a jump which would discard your current selection, as well as a jump which would extend it
 - The label to be applied is calculated based on the distance from the cursor. That is, if you have
 labels like `aa`…`bz`, then the ones closest to your cursor will be `aa`, `ab`, `ac`, and so on, whereas
 the ones furthest from your cursor will be `bx`, `by`, `bz`, irrespective of whether the label comes before
@@ -29,14 +31,18 @@ For example, you can add this command to your `kakrc`:
 source path/to/plugin/jump.kak
 ```
 
+If you're having troubles with installation or something else, feel free to ask for help via issues.
+
 ## Usage
 
 Simply enter the command `:jumpJump`, and then enter the characters of the label you want to jump to.
+If you wish to *extend* current selection up to and including the word under a given label, rather than discard it, then use `:jumpExtend`.
 
-You can add the following mapping to your `kakrc`:
+You can add the following mappings to your `kakrc`:
 
 ```kakscript
 map global normal <ret> :jumpJump<ret>
+map global normal <s-ret> :jumpExtend<ret>
 ```
 
 ## Configuration
@@ -45,19 +51,23 @@ The following options are exposed:
 
 1. **jumpLabelsCharacters**
 Characters to be used in labels. Must be at least 10 characters long.
-Default value: "abcdefghijklmnopqrstuvwxyz".
+
+Default value: `"abcdefghijklmnopqrstuvwxyz"`
 
 2. **jumpExtraWordCharacters**
 Additional characters, aside from alphanumerics, to consider as part of contiguous words for generating labels.
-Default value: "_-".
+
+Default value: `"_-"`
 
 3. **jumpLabelFace**
 Face to use for highlighting jump labels.
-Default value: PrimarySelection
+
+Default value: `PrimarySelection`
 
 4. **jumpDimFace**
 Face to use for dimming out non-label text.
-Default value: comment
+
+Default value: `comment`
 
 ## TODO
 - Different faces for the first and following characters of a label.
