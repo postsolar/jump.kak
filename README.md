@@ -20,12 +20,14 @@ You should have [node](https://github.com/nodejs/node) installed and available i
 
 ## Installation
 
-1. Either:
-  - Clone the repository
-  - Download just the files `index.js` and `jump.kak`.
-    You can put them anywhere you want as long as they happen to be in the same directory and `index.js` is called `index.js`.
+Just clone the repository into your `autoload/` folder.
 
-2. Source the file `jump.kak` in your `kakrc`.
+If you clone it elsewhere, you will also need to source the file `jump.kak`.
+For example, you can add this command to your `kakrc`:
+
+```kakscript
+source path/to/plugin/jump.kak
+```
 
 ## Usage
 
