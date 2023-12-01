@@ -61,11 +61,13 @@ Default value: `"_-"`
 
 3. **jumpLabelFace**
 Face to use for highlighting jump labels.
+Set to `default` to not apply any highlighting at all.
 
-Default value: `PrimarySelection`
+Default value: `'rgb:f07a2b+f'` (slightly dark bright orange — works well on dark and light colorschemes)
 
 4. **jumpDimFace**
 Face to use for dimming out non-label text.
+Set to `default` to not apply any dimming at all.
 
 Default value: `comment`
 

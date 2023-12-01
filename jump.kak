@@ -10,12 +10,12 @@ declare-option -docstring "
   jumpExtraWordCharacters "_-"
 
 declare-option -docstring "
-  Face to use for highlighting jump labels.
+  Face to use for highlighting jump labels. Set to `default` to not apply any highlighting at all.
   " str \
   jumpLabelFace 'rgb:f07a2b+f'
 
 declare-option -docstring "
-  Face to use for dimming out non-label text.
+  Face to use for dimming out non-label text. Set to `default` to not apply any dimming at all.
   " str \
   jumpDimFace comment
 
