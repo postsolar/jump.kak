@@ -13,7 +13,7 @@ declare-option -docstring "
 declare-option -docstring "
   Face to use for highlighting jump labels. Set to `default` to not apply any highlighting at all.
   " str \
-  jumpLabelFace 'rgb:f07a2b+f'
+  jumpLabelFace 'rgb:f07a2b+fa'
 
 declare-option -docstring "
   Face to use for dimming out non-label text. Set to `default` to not apply any dimming at all.
