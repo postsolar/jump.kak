@@ -9,7 +9,6 @@ import Data.FoldableWithIndex (foldlWithIndex)
 import Data.FunctorWithIndex (mapWithIndex)
 import Data.Int as Int
 import Data.Maybe (Maybe(..), maybe)
-import Data.Newtype (class Newtype)
 import Data.String as S
 import Data.String.CodePoints (CodePoint)
 import Data.String.CodeUnits as SCU
@@ -20,7 +19,7 @@ import Effect.Console (log)
 import Effect.Exception (throw)
 import Node.Encoding (byteLength, Encoding(UTF8))
 import Node.Process (lookupEnv) as Process
-import Partial.Unsafe (unsafePartial, unsafeCrashWith)
+import Partial.Unsafe (unsafeCrashWith)
 import Yoga.JSON as JSON
 
 main ∷ Effect Unit
@@ -29,6 +28,22 @@ main =
     >>= getLabels
     >>> JSON.writeJSON
     >>> log
+
+-- | Selection description for the visible part of the buffer.
+-- | Start does not necessarily "come before" end, since selections can have either "direction".
+type SelectionDescription =
+  { startLine ∷ Int
+  , startColumn ∷ Int
+  , endLine ∷ Int
+  , endColumn ∷ Int
+  , orientation ∷ SelectionDescriptionOrientation
+  }
+
+data SelectionDescriptionOrientation
+  = Forward
+  | Backward
+
+derive instance Eq SelectionDescriptionOrientation
 
 -- | A resulting label for a position in the buffer, like `cfx`.
 type Label =
@@ -40,37 +55,36 @@ type Label =
 type CharsetPosition =
   Tuple Int Int
 
--- | A resulting description of a jump label.
-type JumpPosition =
-  { label ∷ Label
-  , line ∷ Int
-  , column ∷ Int
-  , bytePosition ∷ Int
-  , byteLength ∷ Int
-  }
+-- | Selection description for a jump to be executed, in Kakoune format `line.col,line.col`.
+-- | This is an *extending* selection description and it's thus tied to client's context (current selection).
+-- | For selection-discarding jumps, it's simply followed by '<semicolon>' on Kakoune side.
+type JumpSelectionDescription =
+  String
 
--- | Selection description for the visible part of the buffer.
--- | Start does not necessarily "come before" end, since selections can have either "direction".
-type BufferSelectionDescription =
-  { startLine ∷ Int
-  , startColumn ∷ Int
-  , endLine ∷ Int
-  , endColumn ∷ Int
+-- | A resulting description of a jump label.
+-- | Fields `labelByteLength`, `labelBytePosition` and `line` describe where to put the label,
+-- | field `label` is label's characters and field `selectionDescription` will be used to execute
+-- | the jump when it's picked. `jumpOrientationForward` is used after the jump to execute keys 'HE'.
+type JumpPosition =
+  { labelByteLength ∷ Int
+  , labelBytePosition ∷ Int
+  , label ∷ Label
+  , line ∷ Int
+  , selectionDescription ∷ JumpSelectionDescription
+  , jumpOrientationForward ∷ Boolean
   }
 
 type KakouneEnvironment =
-  { buffer ∷ String
-  , bufferSelection ∷ BufferSelectionDescription
-  , currentLine ∷ Int
-  , currentColumn ∷ Int
-  , labelCharset ∷ Charset
+  { bufferSelection ∷ SelectionDescription
+  , bufferContent ∷ String
+  , clientSelection ∷ SelectionDescription
   , extraWordCharacters ∷ Array CodePoint
+  , labelCharset ∷ Charset
+  , autoFlipSelection ∷ Boolean
   }
 
 -- | An array of at least 10 unique code points used to generate jump labels.
-newtype Charset = Charset (Array S.CodePoint)
-
-derive instance newtypeCharset ∷ Newtype Charset _
+newtype Charset = Charset (Array CodePoint)
 
 charsetFromString ∷ String → Maybe Charset
 charsetFromString =
@@ -78,59 +92,87 @@ charsetFromString =
     guard (A.length cps >= 10) $> Charset cps
 
 kakouneEnvironment ∷ Effect KakouneEnvironment
-kakouneEnvironment = do
-  buffer              ← lookupOrThrow "kak_opt_jumpContents"
+kakouneEnvironment = ado
+  autoFlipSelection   ← lookupOrThrow "kak_opt_jumpAutoFlipOnExtend"
+                          >>= parseBoolean
+  bufferContent       ← lookupOrThrow "kak_opt_jumpContents"
   bufferSelection     ← lookupOrThrow "kak_opt_jumpContentsRange"
                           >>= parseSelectionDescription
-  currentLine'        ← lookupOrThrow "kak_cursor_line"
-  currentColumn'      ← lookupOrThrow "kak_cursor_column"
+  clientSelection     ← lookupOrThrow "kak_selection_desc"
+                          >>= parseSelectionDescription
   extraWordCharacters ← lookupOrThrow "kak_opt_jumpExtraWordCharacters"
                           <#> S.toCodePointArray
   labelCharset        ← lookupOrThrow "kak_opt_jumpLabelsCharacters"
-                          >>= charsetFromString >>> maybe (error "invalid labels characters set") pure
-
-  unsafePartial
-    case
-      Int.fromString currentLine', Int.fromString currentColumn'
-      of
-      Just currentLine, Just currentColumn →
-        pure
-          { buffer
-          , currentLine
-          , currentColumn
-          , labelCharset
-          , bufferSelection
-          , extraWordCharacters
-          }
+                          >>= charsetFromString
+                          >>> maybe (error "invalid labels characters set") pure
+  in
+    { autoFlipSelection
+    , bufferContent
+    , bufferSelection
+    , clientSelection
+    , extraWordCharacters
+    , labelCharset
+    }
 
   where
-  parseSelectionDescription ∷ String → Effect BufferSelectionDescription
-  parseSelectionDescription desc =
-    case traverse Int.fromString $ S.split (S.Pattern ".") <=< S.split (S.Pattern ",") $ desc of
-      Just [ startLine, startColumn, endLine, endColumn ] →
-        pure { startLine, startColumn, endLine, endColumn }
-      _ →
-        error $ "couldn't parse selection description: " <> desc
-
   lookupOrThrow ∷ String → Effect String
   lookupOrThrow var = Process.lookupEnv var
-    >>= maybe (error $ "couldn't find $" <> var <> " in the environment\n") pure
+    >>= maybe (error $ "couldn't find $" <> var <> " in the environment") pure
 
   error ∷ ∀ a. String → Effect a
   error msg = throw $ "[ERROR] JumpMode: " <> msg <> "\n"
 
+  parseBoolean ∷ String → Effect Boolean
+  parseBoolean = case _ of
+    "true" → pure true
+    "false" → pure false
+    x → error $ "couldn't parse Boolean: " <> x
+
+  parseSelectionDescription ∷ String → Effect SelectionDescription
+  parseSelectionDescription desc =
+    case traverse Int.fromString $ S.split (S.Pattern ".") <=< S.split (S.Pattern ",") $ desc of
+      Just [ startLine, startColumn, endLine, endColumn ] →
+        pure
+          { startLine
+          , startColumn
+          , endLine
+          , endColumn
+          , orientation:
+              if endLine > startLine || (endLine == startLine && endColumn > startColumn)
+              then Forward
+              else Backward
+          }
+      _ →
+        error $ "couldn't parse selection description: " <> desc
+
 getLabels ∷ KakouneEnvironment → Array JumpPosition
 getLabels env@{ labelCharset: Charset labelCharset } =
-  S.split (S.Pattern "\n") env.buffer
+  S.split (S.Pattern "\n") env.bufferContent
     # mapWithIndex indexLineWords
     -- Split the lines array at the current line in order to traverse
     -- it from that point in both directions
-    # A.splitAt (env.currentLine - lineNrOffset + 1)
+    # A.splitAt (cursorLine - lineNrOffset + 1)
     # \{ before, after } → generateLabels (join before) (join after) zero []
 
   where
   lineNrOffset ∷ Int
-  lineNrOffset = min env.bufferSelection.endLine env.bufferSelection.startLine
+  lineNrOffset = min env.bufferSelection.startLine env.bufferSelection.endLine
+
+  cursorLine ∷ Int
+  cursorLine = case env.bufferSelection.orientation of
+    Forward → env.clientSelection.endLine
+    Backward → env.clientSelection.startLine
+
+  cursorColumn ∷ Int
+  cursorColumn = case env.bufferSelection.orientation of
+    Forward → env.clientSelection.endColumn
+    Backward → env.clientSelection.startColumn
+
+  jumpOrientation ∷ Int → Int → SelectionDescriptionOrientation
+  jumpOrientation lineNr column
+    | lineNr > cursorLine = Forward
+    | lineNr == cursorLine && column > cursorColumn = Forward
+    | otherwise = Backward
 
   generateLabels
     ∷ Array (Label → JumpPosition)
@@ -179,12 +221,24 @@ getLabels env@{ labelCharset: Charset labelCharset } =
             -- Needed to get byte length of the label
             labelRangeSlice label = SCU.slice (column + 1) (column + S.length label + 1) line
 
+            orientation = jumpOrientation (lineNr + lineNrOffset) column
+
+            selectionDescription =
+              let
+                selStart =
+                  if orientation == env.clientSelection.orientation || not env.autoFlipSelection
+                  then show env.clientSelection.startLine <> "." <> show env.clientSelection.startColumn
+                  else show env.clientSelection.endLine <> "." <> show env.clientSelection.endColumn
+              in
+                selStart <> "," <> show (lineNr + lineNrOffset) <> "." <> show (column + 1)
+
             jumpPosition label =
-              { line: lineNr + lineNrOffset
-              , column: column + 1
-              , bytePosition
-              , byteLength: byteLength (labelRangeSlice label) UTF8
-              , label
+              { label
+              , labelByteLength: byteLength (labelRangeSlice label) UTF8
+              , labelBytePosition: bytePosition
+              , line: lineNr + lineNrOffset
+              , selectionDescription
+              , jumpOrientationForward: orientation == Forward
               }
           in
             case prev of
@@ -197,10 +251,10 @@ getLabels env@{ labelCharset: Charset labelCharset } =
                 | otherwise → acc
       }
 
-    wordChar ∷ CodePoint → Boolean
-    wordChar codepoint =
-      isAlphaNum codepoint
-        || A.elem codepoint env.extraWordCharacters
+  wordChar ∷ CodePoint → Boolean
+  wordChar codepoint =
+    isAlphaNum codepoint
+      || A.elem codepoint env.extraWordCharacters
 
   nextLabel ∷ CharsetPosition → Tuple Label CharsetPosition
   nextLabel (Tuple ix1 ix2) =

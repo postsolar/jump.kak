@@ -63,12 +63,12 @@ define-command -hidden jumpAddDimHL %{
 define-command -hidden jumpGetLabelsJSON %{
   set-option window jumpLabelsPositions %sh{
     # Environment variables to make accessible to the labels generating script
+    # $kak_selection_desc
     # $kak_opt_jumpContents
-    # $kak_cursor_line
-    # $kak_cursor_column
     # $kak_opt_jumpContentsRange
     # $kak_opt_jumpLabelsCharacters
     # $kak_opt_jumpExtraWordCharacters
+    # $kak_opt_jumpAutoFlipOnExtend
     node "$(dirname $kak_opt_jumpSourcePath)/index.js"
   }
 }
@@ -84,9 +84,9 @@ define-command -hidden jumpSetLabels %{
         ( l => process.stdout.write
             ( l.line
             + '.'
-            + l.bytePosition
+            + l.labelBytePosition
             + '+'
-            + l.byteLength
+            + l.labelByteLength
             + '|{$kak_opt_jumpLabelFace}'
             + l.label
             + ' '
@@ -118,14 +118,9 @@ define-command -hidden jumpOnPromptChange %{
       const jumpLabels = JSON.parse('$kak_opt_jumpLabelsPositions')
       const targetLabel = jumpLabels.find(label => label.label === '$kak_text')
       if (targetLabel === undefined) process.exit()
-
-      const toTargetLine =
-        ( targetLabel.line > $kak_cursor_line
-            ? (targetLabel.line - $kak_cursor_line) + 'j gh'
-            : ($kak_cursor_line - targetLabel.line) + 'k gh'
-        ).replace(/^0\w gh$/, 'gh')
-
-      console.log('execute-keys <esc> ' + toTargetLine + (targetLabel.column - 1) + 'l he')
+      console.log('execute-keys <esc>')
+      console.log('select -display-column ' + targetLabel.selectionDescription)
+      console.log('execute-keys <semicolon>he')
     "
   }
 }
@@ -136,42 +131,9 @@ define-command -hidden jumpExtendOnPromptChange %{
       const jumpLabels = JSON.parse('$kak_opt_jumpLabelsPositions')
       const targetLabel = jumpLabels.find(label => label.label === '$kak_text')
       if (targetLabel === undefined) process.exit()
-
-      const [ selStartLine, selStartCol, selEndLine, selEndCol ] =
-        '$kak_selection_desc'.match(/\d+/g)
-
-      const selOrientedForward =
-        selEndLine > selStartLine
-          || selEndLine === selStartLine && selEndCol > selStartCol
-
-      const jumpIsForward =
-        targetLabel.line > $kak_cursor_line
-          || (targetLabel.line === $kak_cursor_line && targetLabel.column > $kak_cursor_column)
-
-      const flipSelection =
-        $kak_opt_jumpAutoFlipOnExtend && selOrientedForward !== jumpIsForward
-          ? '<a-semicolon>'
-          : ''
-
-      const lineWiseMoves =
-        ( targetLabel.line > $kak_cursor_line && selOrientedForward
-          ? (targetLabel.line - $kak_cursor_line) + 'J'
-        : targetLabel.line > $kak_cursor_line
-          ? (targetLabel.line - $kak_cursor_line - (selStartLine - selEndLine)) + 'J'
-        : targetLabel.line < $kak_cursor_line && !selOrientedForward
-          ? ($kak_cursor_line - targetLabel.line) + 'K'
-        : targetLabel.line < $kak_cursor_line
-          ? ($kak_cursor_line - targetLabel.line - (selEndLine - selStartLine)) + 'K'
-        : ''
-        ).replace(/^0\w$/, '')
-
-      const extendRight =
-        targetLabel.column === 1 && !jumpIsForward
-          ? ''
-          : (targetLabel.column - 1) + 'L'
-
-      const lastKeyPress = jumpIsForward ? 'E' : ''
-      console.log('execute-keys <esc> ' + flipSelection + lineWiseMoves + '<a-H>' + extendRight + lastKeyPress)
+      console.log('execute-keys <esc>')
+      console.log('select -display-column ' + targetLabel.selectionDescription)
+      if (targetLabel.jumpOrientationForward) console.log('execute-keys HE')
     "
   }
 }

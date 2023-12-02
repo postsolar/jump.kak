@@ -50,6 +50,11 @@ var unsafeGet = function(label) {
   };
 };
 
+// output-es/Data.Show/foreign.js
+var showIntImpl = function(n) {
+  return n.toString();
+};
+
 // output-es/Data.Ordering/index.js
 var $Ordering = (tag) => tag;
 var LT = /* @__PURE__ */ $Ordering("LT");
@@ -4591,6 +4596,7 @@ var identity5 = (x) => x;
 var writeForeignString = { writeImpl: unsafeCoerce };
 var writeForeignInt = { writeImpl: unsafeCoerce };
 var writeForeignFieldsNilRowR = { writeImplFields: (v) => (v1) => identity5 };
+var writeForeignBoolean = { writeImpl: unsafeCoerce };
 var writeJSON = (dictWriteForeign) => (x) => _unsafeStringify(dictWriteForeign.writeImpl(x));
 var writeForeignFieldsCons = (dictIsSymbol) => (dictWriteForeign) => (dictWriteForeignFields) => () => () => () => ({
   writeImplFields: (v) => (rec) => {
@@ -4601,6 +4607,7 @@ var writeForeignFieldsCons = (dictIsSymbol) => (dictWriteForeign) => (dictWriteF
 });
 
 // output-es/Main/index.js
+var $SelectionDescriptionOrientation = (tag) => tag;
 var min2 = (x) => (y) => {
   const v = ordInt.compare(x)(y);
   if (v === "LT") {
@@ -4615,6 +4622,8 @@ var min2 = (x) => (y) => {
   fail();
 };
 var traverse = /* @__PURE__ */ (() => traversableArray.traverse(applicativeMaybe))();
+var Forward = /* @__PURE__ */ $SelectionDescriptionOrientation("Forward");
+var Backward = /* @__PURE__ */ $SelectionDescriptionOrientation("Backward");
 var getLabels = (v) => {
   const $0 = v.labelCharset;
   const nextLabel = (v1) => {
@@ -4627,7 +4636,7 @@ var getLabels = (v) => {
     }
     return _crashWith("Index error");
   };
-  const lineNrOffset = min2(v.bufferSelection.endLine)(v.bufferSelection.startLine);
+  const lineNrOffset = min2(v.bufferSelection.startLine)(v.bufferSelection.endLine);
   const generateLabels = (generateLabels$a0$copy) => (generateLabels$a1$copy) => (generateLabels$a2$copy) => (generateLabels$a3$copy) => {
     let generateLabels$a0 = generateLabels$a0$copy;
     let generateLabels$a1 = generateLabels$a1$copy;
@@ -4683,18 +4692,48 @@ var getLabels = (v) => {
     }
     return generateLabels$r;
   };
-  const $1 = splitAt((v.currentLine - lineNrOffset | 0) + 1 | 0)(mapWithIndexArray((lineNr) => (line) => foldableWithIndexArray.foldlWithIndex((column) => (v1) => (codepoint) => {
+  const cursorLine = (() => {
+    if (v.bufferSelection.orientation === "Forward") {
+      return v.clientSelection.endLine;
+    }
+    if (v.bufferSelection.orientation === "Backward") {
+      return v.clientSelection.startLine;
+    }
+    fail();
+  })();
+  const cursorColumn = (() => {
+    if (v.bufferSelection.orientation === "Forward") {
+      return v.clientSelection.endColumn;
+    }
+    if (v.bufferSelection.orientation === "Backward") {
+      return v.clientSelection.startColumn;
+    }
+    fail();
+  })();
+  const $1 = splitAt((cursorLine - lineNrOffset | 0) + 1 | 0)(mapWithIndexArray((lineNr) => (line) => foldableWithIndexArray.foldlWithIndex((column) => (v1) => (codepoint) => {
     const $12 = v1.bytePosition;
     return {
       prev: $Maybe("Just", codepoint),
       bytePosition: $12 + byteLength(singleton2(codepoint))(UTF8) | 0,
       acc: (() => {
+        const $2 = lineNr + lineNrOffset | 0;
+        const orientation = (() => {
+          if ($2 > cursorLine) {
+            return Forward;
+          }
+          if ($2 === cursorLine && column > cursorColumn) {
+            return Forward;
+          }
+          return Backward;
+        })();
+        const selectionDescription = ((orientation === "Forward" ? v.clientSelection.orientation === "Forward" : orientation === "Backward" && v.clientSelection.orientation === "Backward") || !v.autoFlipSelection ? showIntImpl(v.clientSelection.startLine) + "." + showIntImpl(v.clientSelection.startColumn) + "," : showIntImpl(v.clientSelection.endLine) + "." + showIntImpl(v.clientSelection.endColumn) + ",") + showIntImpl(lineNr + lineNrOffset | 0) + "." + showIntImpl(column + 1 | 0);
         const jumpPosition = (label) => ({
+          label,
+          labelByteLength: byteLength(slice(column + 1 | 0)((column + toCodePointArray(label).length | 0) + 1 | 0)(line))(UTF8),
+          labelBytePosition: $12,
           line: lineNr + lineNrOffset | 0,
-          column: column + 1 | 0,
-          bytePosition: $12,
-          byteLength: byteLength(slice(column + 1 | 0)((column + toCodePointArray(label).length | 0) + 1 | 0)(line))(UTF8),
-          label
+          selectionDescription,
+          jumpOrientationForward: orientation === "Forward"
         });
         if (v1.prev.tag === "Nothing") {
           if (isAlphaNum(codepoint) || elem(eqCodePoint)(codepoint)(v.extraWordCharacters)) {
@@ -4714,112 +4753,130 @@ var getLabels = (v) => {
         fail();
       })()
     };
-  })({ prev: Nothing, bytePosition: 1, acc: [] })(toCodePointArray(line)).acc)(split("\n")(v.buffer)));
+  })({ prev: Nothing, bytePosition: 1, acc: [] })(toCodePointArray(line)).acc)(split("\n")(v.bufferContent)));
   return generateLabels(arrayBind($1.before)(identity))(arrayBind($1.after)(identity))($Tuple(0, 0))([]);
 };
 var kakouneEnvironment = /* @__PURE__ */ (() => {
-  const $0 = throwException(error2("[ERROR] JumpMode: couldn't find $kak_opt_jumpContents in the environment\n\n"));
+  const $0 = throwException(error2("[ERROR] JumpMode: couldn't find $kak_opt_jumpAutoFlipOnExtend in the environment\n"));
+  const $1 = throwException(error2("[ERROR] JumpMode: couldn't find $kak_opt_jumpContents in the environment\n"));
+  const $2 = throwException(error2("[ERROR] JumpMode: couldn't find $kak_opt_jumpContentsRange in the environment\n"));
+  const $3 = throwException(error2("[ERROR] JumpMode: couldn't find $kak_selection_desc in the environment\n"));
+  const $4 = throwException(error2("[ERROR] JumpMode: couldn't find $kak_opt_jumpExtraWordCharacters in the environment\n"));
+  const $5 = throwException(error2("[ERROR] JumpMode: couldn't find $kak_opt_jumpLabelsCharacters in the environment\n"));
+  const $6 = throwException(error2("[ERROR] JumpMode: invalid labels characters set\n"));
   return () => {
     const a$p = unsafeGetEnv();
-    const $1 = _lookup(Nothing, Just, "kak_opt_jumpContents", a$p);
-    const buffer = (() => {
-      if ($1.tag === "Nothing") {
-        return $0();
-      }
-      if ($1.tag === "Just") {
-        return $1._1;
-      }
-      fail();
-    })();
-    const $2 = throwException(error2("[ERROR] JumpMode: couldn't find $kak_opt_jumpContentsRange in the environment\n\n"));
-    const a$p$1 = unsafeGetEnv();
-    const $3 = _lookup(Nothing, Just, "kak_opt_jumpContentsRange", a$p$1);
-    const desc = (() => {
-      if ($3.tag === "Nothing") {
-        return $2();
-      }
-      if ($3.tag === "Just") {
-        return $3._1;
-      }
-      fail();
-    })();
-    const v = traverse(fromString)(arrayBind(split(",")(desc))(split(".")));
-    const bufferSelection = v.tag === "Just" && v._1.length === 4 ? { startLine: v._1[0], startColumn: v._1[1], endLine: v._1[2], endColumn: v._1[3] } : throwException(error2("[ERROR] JumpMode: couldn't parse selection description: " + desc + "\n"))();
-    const $4 = throwException(error2("[ERROR] JumpMode: couldn't find $kak_cursor_line in the environment\n\n"));
-    const a$p$2 = unsafeGetEnv();
-    const $5 = _lookup(Nothing, Just, "kak_cursor_line", a$p$2);
-    const currentLine$p = (() => {
-      if ($5.tag === "Nothing") {
-        return $4();
-      }
-      if ($5.tag === "Just") {
-        return $5._1;
-      }
-      fail();
-    })();
-    const $6 = throwException(error2("[ERROR] JumpMode: couldn't find $kak_cursor_column in the environment\n\n"));
-    const a$p$3 = unsafeGetEnv();
-    const $7 = _lookup(Nothing, Just, "kak_cursor_column", a$p$3);
-    const currentColumn$p = (() => {
+    const $7 = _lookup(Nothing, Just, "kak_opt_jumpAutoFlipOnExtend", a$p);
+    const v = (() => {
       if ($7.tag === "Nothing") {
-        return $6();
+        return $0();
       }
       if ($7.tag === "Just") {
         return $7._1;
       }
       fail();
     })();
-    const $8 = throwException(error2("[ERROR] JumpMode: couldn't find $kak_opt_jumpExtraWordCharacters in the environment\n\n"));
+    const a$p$1 = (() => {
+      if (v === "true") {
+        return true;
+      }
+      if (v === "false") {
+        return false;
+      }
+      return throwException(error2("[ERROR] JumpMode: couldn't parse Boolean: " + v + "\n"))();
+    })();
+    const a$p$2 = unsafeGetEnv();
+    const $8 = _lookup(Nothing, Just, "kak_opt_jumpContents", a$p$2);
+    const a$p$3 = (() => {
+      if ($8.tag === "Nothing") {
+        return $1();
+      }
+      if ($8.tag === "Just") {
+        return $8._1;
+      }
+      fail();
+    })();
     const a$p$4 = unsafeGetEnv();
-    const $9 = _lookup(Nothing, Just, "kak_opt_jumpExtraWordCharacters", a$p$4);
-    const a$p$5 = (() => {
+    const $9 = _lookup(Nothing, Just, "kak_opt_jumpContentsRange", a$p$4);
+    const $10 = (() => {
       if ($9.tag === "Nothing") {
-        return $8();
+        return $2();
       }
       if ($9.tag === "Just") {
         return $9._1;
       }
       fail();
     })();
-    const extraWordCharacters = toCodePointArray(a$p$5);
-    const $10 = throwException(error2("[ERROR] JumpMode: invalid labels characters set\n"));
-    const $11 = throwException(error2("[ERROR] JumpMode: couldn't find $kak_opt_jumpLabelsCharacters in the environment\n\n"));
+    const v$1 = traverse(fromString)(arrayBind(split(",")($10))(split(".")));
+    const a$p$5 = v$1.tag === "Just" && v$1._1.length === 4 ? {
+      startLine: v$1._1[0],
+      startColumn: v$1._1[1],
+      endLine: v$1._1[2],
+      endColumn: v$1._1[3],
+      orientation: v$1._1[2] > v$1._1[0] || v$1._1[2] === v$1._1[0] && v$1._1[3] > v$1._1[1] ? Forward : Backward
+    } : throwException(error2("[ERROR] JumpMode: couldn't parse selection description: " + $10 + "\n"))();
     const a$p$6 = unsafeGetEnv();
-    const $12 = _lookup(Nothing, Just, "kak_opt_jumpLabelsCharacters", a$p$6);
-    const $13 = (() => {
-      if ($12.tag === "Nothing") {
-        return $11();
+    const $11 = _lookup(Nothing, Just, "kak_selection_desc", a$p$6);
+    const $12 = (() => {
+      if ($11.tag === "Nothing") {
+        return $3();
       }
-      if ($12.tag === "Just") {
-        return $12._1;
+      if ($11.tag === "Just") {
+        return $11._1;
       }
       fail();
     })();
-    const $14 = toCodePointArray($13);
-    if ($14.length >= 10) {
-      const v$12 = fromString(currentColumn$p);
-      const v12 = fromString(currentLine$p);
-      if (v12.tag === "Just" && v$12.tag === "Just") {
-        return { buffer, currentLine: v12._1, currentColumn: v$12._1, labelCharset: $14, bufferSelection, extraWordCharacters };
+    const v$2 = traverse(fromString)(arrayBind(split(",")($12))(split(".")));
+    const a$p$7 = v$2.tag === "Just" && v$2._1.length === 4 ? {
+      startLine: v$2._1[0],
+      startColumn: v$2._1[1],
+      endLine: v$2._1[2],
+      endColumn: v$2._1[3],
+      orientation: v$2._1[2] > v$2._1[0] || v$2._1[2] === v$2._1[0] && v$2._1[3] > v$2._1[1] ? Forward : Backward
+    } : throwException(error2("[ERROR] JumpMode: couldn't parse selection description: " + $12 + "\n"))();
+    const a$p$8 = unsafeGetEnv();
+    const $13 = _lookup(Nothing, Just, "kak_opt_jumpExtraWordCharacters", a$p$8);
+    const a$p$9 = (() => {
+      if ($13.tag === "Nothing") {
+        return $4();
+      }
+      if ($13.tag === "Just") {
+        return $13._1;
       }
       fail();
-    }
-    const labelCharset = $10();
-    const v$1 = fromString(currentColumn$p);
-    const v1 = fromString(currentLine$p);
-    if (v1.tag === "Just" && v$1.tag === "Just") {
-      return { buffer, currentLine: v1._1, currentColumn: v$1._1, labelCharset, bufferSelection, extraWordCharacters };
-    }
-    fail();
+    })();
+    const a$p$10 = unsafeGetEnv();
+    const $14 = _lookup(Nothing, Just, "kak_opt_jumpLabelsCharacters", a$p$10);
+    const $15 = (() => {
+      if ($14.tag === "Nothing") {
+        return $5();
+      }
+      if ($14.tag === "Just") {
+        return $14._1;
+      }
+      fail();
+    })();
+    const $16 = toCodePointArray($15);
+    const a$p$11 = $16.length >= 10 ? $16 : $6();
+    return {
+      autoFlipSelection: a$p$1,
+      bufferContent: a$p$3,
+      bufferSelection: a$p$5,
+      clientSelection: a$p$7,
+      extraWordCharacters: toCodePointArray(a$p$9),
+      labelCharset: a$p$11
+    };
   };
 })();
 var main = /* @__PURE__ */ (() => {
   const $0 = writeJSON((() => {
-    const $02 = writeForeignFieldsCons({ reflectSymbol: () => "byteLength" })(writeForeignInt)(writeForeignFieldsCons({
-      reflectSymbol: () => "bytePosition"
-    })(writeForeignInt)(writeForeignFieldsCons({ reflectSymbol: () => "column" })(writeForeignInt)(writeForeignFieldsCons({
+    const $02 = writeForeignFieldsCons({ reflectSymbol: () => "jumpOrientationForward" })(writeForeignBoolean)(writeForeignFieldsCons({
       reflectSymbol: () => "label"
-    })(writeForeignString)(writeForeignFieldsCons({ reflectSymbol: () => "line" })(writeForeignInt)(writeForeignFieldsNilRowR)()()())()()())()()())()()())()()();
+    })(writeForeignString)(writeForeignFieldsCons({ reflectSymbol: () => "labelByteLength" })(writeForeignInt)(writeForeignFieldsCons({
+      reflectSymbol: () => "labelBytePosition"
+    })(writeForeignInt)(writeForeignFieldsCons({ reflectSymbol: () => "line" })(writeForeignInt)(writeForeignFieldsCons({
+      reflectSymbol: () => "selectionDescription"
+    })(writeForeignString)(writeForeignFieldsNilRowR)()()())()()())()()())()()())()()())()()();
     return { writeImpl: (xs) => arrayMap((rec) => $02.writeImplFields($$Proxy)(rec)({}))(xs) };
   })());
   return () => {
