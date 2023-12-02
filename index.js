@@ -4729,7 +4729,7 @@ var getLabels = (v) => {
         const selectionDescription = ((orientation === "Forward" ? v.clientSelection.orientation === "Forward" : orientation === "Backward" && v.clientSelection.orientation === "Backward") || !v.autoFlipSelection ? showIntImpl(v.clientSelection.startLine) + "." + showIntImpl(v.clientSelection.startColumn) + "," : showIntImpl(v.clientSelection.endLine) + "." + showIntImpl(v.clientSelection.endColumn) + ",") + showIntImpl(lineNr + lineNrOffset | 0) + "." + showIntImpl(column + 1 | 0);
         const jumpPosition = (label) => ({
           label,
-          labelByteLength: byteLength(slice(column + 1 | 0)((column + toCodePointArray(label).length | 0) + 1 | 0)(line))(UTF8),
+          labelByteLength: byteLength(slice(column)(column + toCodePointArray(label).length | 0)(line))(UTF8),
           labelBytePosition: $12,
           line: lineNr + lineNrOffset | 0,
           selectionDescription,

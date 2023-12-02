@@ -219,7 +219,7 @@ getLabels env@{ labelCharset: Charset labelCharset } =
           let
             -- Slice of the line where the label is supposed to be
             -- Needed to get byte length of the label
-            labelRangeSlice label = SCU.slice (column + 1) (column + S.length label + 1) line
+            labelRangeSlice label = SCU.slice column (column + S.length label) line
 
             orientation = jumpOrientation (lineNr + lineNrOffset) column
 
