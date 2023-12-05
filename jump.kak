@@ -45,6 +45,10 @@ declare-option -hidden str jumpContents
 # Selection description of the visible part of the buffer.
 declare-option -hidden str jumpContentsRange
 
+# A temporary storage for the selection description of the target word
+# when executing a jump with `-add` switch.
+declare-option -hidden str jumpAddSelectionDesc
+
 # Grab window content and push it into respective options
 define-command -hidden jumpSelectWindow %{
   eval -draft %{
@@ -111,30 +115,12 @@ define-command -hidden jumpRemoveHighlighters %{
   remove-highlighter window/jumpLabels
 }
 
-# Record keypresses and execute the jump as soon as there's a matching label
-define-command -hidden jumpOnPromptChange %{
+define-command -hidden jumpOnPromptChange -params 1..1 %{
   evaluate-commands %sh{
-    node -e "
-      const jumpLabels = JSON.parse('$kak_opt_jumpLabelsPositions')
-      const targetLabel = jumpLabels.find(label => label.label === '$kak_text')
-      if (targetLabel === undefined) process.exit()
-      console.log('execute-keys <esc>')
-      console.log('select -display-column ' + targetLabel.selectionDescription)
-      console.log('execute-keys <semicolon>he')
-    "
-  }
-}
-
-define-command -hidden jumpExtendOnPromptChange %{
-  evaluate-commands %sh{
-    node -e "
-      const jumpLabels = JSON.parse('$kak_opt_jumpLabelsPositions')
-      const targetLabel = jumpLabels.find(label => label.label === '$kak_text')
-      if (targetLabel === undefined) process.exit()
-      console.log('execute-keys <esc>')
-      console.log('select -display-column ' + targetLabel.selectionDescription)
-      if (targetLabel.jumpOrientationForward) console.log('execute-keys HE')
-    "
+    # Environment variables to expose:
+    #   $kak_text
+    #   $kak_opt_jumpLabelsPositions
+    jumpMode="$1" node "$(dirname $kak_opt_jumpSourcePath)/performJump.js"
   }
 }
 
@@ -146,19 +132,17 @@ define-command -hidden jumpOnPromptSubmit %{
   echo -markup '{Error}Jump label not found'
 }
 
-define-command jumpJump \
-  -params 0 \
-  -docstring "Perform a labels-based jump within the visible part of the buffer" \
-  %{
-  jumpPrepareJump
-  prompt 'Jump to: ' -on-change jumpOnPromptChange -on-abort jumpRemoveHighlighters jumpOnPromptSubmit
-}
+define-command -params 0..1 -docstring "
+  jumpJump [<switches>]: perform a labels-based jump within the visible part of the buffer
 
-define-command jumpExtend \
-  -params 0 \
-  -docstring "Perform a labels-based jump within the visible part of the buffer, extending current selection" \
-  %{
+  Switches describe the way the jump will modify current selection(s).
+      -discard    Default behavior. Discard existing selection(s) and select target word.
+      -add        Keep existing selection(s) and add target word as a new selection.
+      -extend     Extend current primary selection up to and including target word. See option `jumpAutoFlipOnExtend` for more details.
+  " jumpJump %{
+
   jumpPrepareJump
-  prompt 'Extend to: ' -on-change jumpExtendOnPromptChange -on-abort jumpRemoveHighlighters jumpOnPromptSubmit
+  prompt 'Label: ' -on-change %{ jumpOnPromptChange %arg{1} } -on-abort jumpRemoveHighlighters jumpOnPromptSubmit
+
 }
 
