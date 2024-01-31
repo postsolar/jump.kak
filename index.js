@@ -111,55 +111,12 @@ var runSTFn2 = function runSTFn22(fn) {
 };
 
 // output-es/Data.Array.ST/foreign.js
-var pushAllImpl = function(as, xs) {
-  return xs.push.apply(xs, as);
+var pushImpl = function(a, xs) {
+  return xs.push(a);
 };
-var sortByImpl = function() {
-  function mergeFromTo(compare, fromOrdering, xs1, xs2, from, to) {
-    var mid;
-    var i;
-    var j;
-    var k;
-    var x;
-    var y;
-    var c;
-    mid = from + (to - from >> 1);
-    if (mid - from > 1)
-      mergeFromTo(compare, fromOrdering, xs2, xs1, from, mid);
-    if (to - mid > 1)
-      mergeFromTo(compare, fromOrdering, xs2, xs1, mid, to);
-    i = from;
-    j = mid;
-    k = from;
-    while (i < mid && j < to) {
-      x = xs2[i];
-      y = xs2[j];
-      c = fromOrdering(compare(x)(y));
-      if (c > 0) {
-        xs1[k++] = y;
-        ++j;
-      } else {
-        xs1[k++] = x;
-        ++i;
-      }
-    }
-    while (i < mid) {
-      xs1[k++] = xs2[i++];
-    }
-    while (j < to) {
-      xs1[k++] = xs2[j++];
-    }
-  }
-  return function(compare, fromOrdering, xs) {
-    if (xs.length < 2)
-      return xs;
-    mergeFromTo(compare, fromOrdering, xs, xs.slice(0), 0, xs.length);
-    return xs;
-  };
-}();
 
 // output-es/Data.Array.ST/index.js
-var push = (a) => runSTFn2(pushAllImpl)([a]);
+var push = /* @__PURE__ */ runSTFn2(pushImpl);
 
 // output-es/Data.Foldable/foreign.js
 var foldrArray = function(f) {
@@ -249,7 +206,7 @@ var unsafeCoerce = function(x) {
 };
 
 // output-es/Data.Traversable/foreign.js
-var traverseArrayImpl = function() {
+var traverseArrayImpl = /* @__PURE__ */ function() {
   function array1(a) {
     return [a];
   }
@@ -327,31 +284,6 @@ var replicatePolyfill = function(count, value) {
   return result;
 };
 var replicateImpl = typeof Array.prototype.fill === "function" ? replicateFill : replicatePolyfill;
-var fromFoldableImpl = function() {
-  function Cons(head, tail) {
-    this.head = head;
-    this.tail = tail;
-  }
-  var emptyList = {};
-  function curryCons(head) {
-    return function(tail) {
-      return new Cons(head, tail);
-    };
-  }
-  function listToArray(list) {
-    var result = [];
-    var count = 0;
-    var xs = list;
-    while (xs !== emptyList) {
-      result[count++] = xs.head;
-      xs = xs.tail;
-    }
-    return result;
-  }
-  return function(foldr, xs) {
-    return listToArray(foldr(curryCons)(emptyList)(xs));
-  };
-}();
 var unconsImpl = function(empty2, next, xs) {
   return xs.length === 0 ? empty2({}) : next(xs[0])(xs.slice(1));
 };
@@ -362,51 +294,6 @@ var findIndexImpl = function(just, nothing, f, xs) {
   }
   return nothing;
 };
-var sortByImpl2 = function() {
-  function mergeFromTo(compare, fromOrdering, xs1, xs2, from, to) {
-    var mid;
-    var i;
-    var j;
-    var k;
-    var x;
-    var y;
-    var c;
-    mid = from + (to - from >> 1);
-    if (mid - from > 1)
-      mergeFromTo(compare, fromOrdering, xs2, xs1, from, mid);
-    if (to - mid > 1)
-      mergeFromTo(compare, fromOrdering, xs2, xs1, mid, to);
-    i = from;
-    j = mid;
-    k = from;
-    while (i < mid && j < to) {
-      x = xs2[i];
-      y = xs2[j];
-      c = fromOrdering(compare(x)(y));
-      if (c > 0) {
-        xs1[k++] = y;
-        ++j;
-      } else {
-        xs1[k++] = x;
-        ++i;
-      }
-    }
-    while (i < mid) {
-      xs1[k++] = xs2[i++];
-    }
-    while (j < to) {
-      xs1[k++] = xs2[j++];
-    }
-  }
-  return function(compare, fromOrdering, xs) {
-    var out;
-    if (xs.length < 2)
-      return xs;
-    out = xs.slice(0);
-    mergeFromTo(compare, fromOrdering, out, xs.slice(0), 0, xs.length);
-    return out;
-  };
-}();
 var sliceImpl = function(s, e, l) {
   return l.slice(s, e);
 };
