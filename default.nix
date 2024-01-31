@@ -3,7 +3,7 @@
 , purix
 , esbuild
 , purs-backend-es
-, nodePackages_latest
+, nodePackages
 }:
 
 let
@@ -14,7 +14,7 @@ let
     corefn = true;
   };
 
-  inherit (nodePackages_latest) nodejs;
+  inherit (nodePackages) nodejs;
 
 in
 

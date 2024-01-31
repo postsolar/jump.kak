@@ -31,7 +31,7 @@
 
         packages = forAllSystems (system:
           let pkgs = nixpkgsFor.${system}; in {
-            default = pkgs.callPackage ./default.nix {};
+            default = pkgs.callPackage ./default.nix { nodePackages = pkgs.nodePackages_latest; };
           });
 
         devShells = forAllSystems (system:
