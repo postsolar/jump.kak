@@ -1,5 +1,4 @@
 { stdenvNoCC
-, writeText
 , purix
 , esbuild
 , purs-backend-es
@@ -18,7 +17,7 @@ let
 
 in
 
-  stdenvNoCC.mkDerivation rec {
+  stdenvNoCC.mkDerivation {
     pname = "kak-jump";
     version = "0.2.1";
 
@@ -39,4 +38,3 @@ in
       '';
 
   }
-
